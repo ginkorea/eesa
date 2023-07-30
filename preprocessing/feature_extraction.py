@@ -1,4 +1,5 @@
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+import numpy as np
 
 
 class FeatureExtractor:
@@ -47,17 +48,41 @@ class NGram(FeatureExtractor):
         self.vectorizer = CountVectorizer(ngram_range=ngram_range)
 
 
-texts = [
-    "I love running in the mornings.",
-    "Runners are running away while running shoes are running.",
-    "I love running and swimming for fitness.",
-]
+class MultiExtractor:
 
-bow = BagOfWords(texts)
-bow.process()
+    def __init__(self, data):
+        self.vector = []
+        self.bow = BagOfWords(data)
+        self.tf_idf = TermFreqInverseDocFreq(data)
+        self.ngram = NGram(data)
+        self.extractors = [self.bow, self.tf_idf, self.ngram]
 
-tf_idf = TermFreqInverseDocFreq(texts)
-tf_idf.process()
+    def extract(self):
+        for extractor in self.extractors:
+            extractor.process()
 
-ngram = NGram(texts)
-ngram.process()
+    def merge(self):
+        for extractor in self.extractors:
+            array = extractor.vector.toarray()
+            array_to_list = list(array[0])
+            for number in array_to_list:
+                self.vector.append(number)
+        print(self.vector)
+
+    def vec2array(self):
+        return np.array(self.vector, dtype="float")
+
+
+def test():
+    texts = [
+        "I love running in the mornings.",
+        "Runners are running away while running shoes are running.",
+        "I love running and swimming for fitness.",
+    ]
+
+    multi = MultiExtractor(texts)
+    multi.extract()
+    multi.merge()
+    print(multi.vec2array())
+
+

@@ -73,6 +73,7 @@ def load_source_data():
         print("Error occurred while reading CSV files:", e)
         return []
 
-concat_d()
 
-
+def load(file):
+    df = pd.read_csv(file, sep='|')
+    return df
