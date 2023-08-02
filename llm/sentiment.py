@@ -1,3 +1,5 @@
+import openai
+
 from llm.util import *
 from llm.openai_utils import *
 
@@ -21,30 +23,56 @@ class SentiChat(openai.ChatCompletion):
                                   "Explanation Grade [0 - 1] | Explanation [Free Text]"}]
         self.messages = self.intro
         self.prompt = "Analyze the sentiment of the following:"
+        self.response = None
 
     def create(self, text):
-        if len(self.messages) > 6:
-            self.messages = self.intro + self.messages[-1:]
         response = super().create(
             model=self.engine,
             messages=text,
         )
         if self.debug:
             yellow(response)
-        self.messages.append(response["choices"][0]["message"])
+        return response["choices"][0]["message"]
 
     def say_last(self):
         cyan(self.messages[-1]["content"])
 
-    def get_user_input(self):
-        self.messages.append({"role": "user", "content": self.prompt + input()})
+    def get_input(self, text):
+        pass
 
-    def chat(self):
+    def classify_sentiment(self, text, verbose=False):
+        if self.debug:
+            yellow(text)
+        self.messages.append({"role": "user", "content": self.prompt + text})
         if self.debug:
             cyan(self.messages)
-        self.get_user_input()
-        self.create(self.messages)
-        self.say_last()
+        self.response = self.create(self.messages)
+        if verbose:
+            self.say_last()
+        return self.response['content']
+
+
+class SentiSummary(SentiChat):
+
+    def __init__(self, debug=True):
+        super().__init__()
+        self.debug = debug
+        self.engine = "gpt-3.5-turbo"
+        self.intro = [{"role": "system",
+                       "content": "You a component of a sentiment analyzer,  your only job is to summarize a list of "
+                                  "explanations into a single explanation. In essence you are averaging five different "
+                                  "explanations to derive a summary explanation"}]
+        self.messages = self.intro
+        self.prompt = "Provide a 1 - 2 sentence summary of the following explanations:"
+        self.response = None
+
+    def summarize_explanations(self, explanations, verbose=False):
+        if self.debug:
+            red(explanations)
+        summary = self.classify_sentiment(explanations, verbose=verbose)
+        return summary
+
+
 
 
 def create_senti_chat_bot():
@@ -56,6 +84,5 @@ def create_senti_chat_bot():
         cb.chat()
         if cb.messages[-1]["content"] == "exit":
             run = False
-
 
 # create_senti_chat_bot()

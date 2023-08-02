@@ -28,7 +28,7 @@ class Classifier:
         self.k_fold = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         self.cv_results = []  # To store the cross-validation results for each fold
 
-    def _train_fold(self, train_index, test_index, boost_rounds):
+    def _train_fold_with_dict(self, fold_index, train_index, test_index, boost_rounds, result_dict):
         x_train, x_test = self.x[train_index], self.x[test_index]
         y_train, y_test = self.y[train_index], self.y[test_index]
 
@@ -42,14 +42,17 @@ class Classifier:
         # Make predictions on the test set
         y_pred = model.predict(d_test)
 
-        # Return the fold index and the predictions
-        return test_index, y_pred
+        # Store the results in the shared dictionary
+        result_dict[fold_index] = y_pred
 
     def train(self, boost_rounds=100):
         i = 0
+        manager = multiprocessing.Manager()
+        result_dict = manager.dict()
         processes = []
-        for train_index, test_index in self.k_fold.split(self.x):
-            process = multiprocessing.Process(target=self._train_fold, args=(train_index, test_index, boost_rounds))
+        for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
+            process = multiprocessing.Process(target=self._train_fold_with_dict,
+                                              args=(fold_index, train_index, test_index, boost_rounds, result_dict))
             processes.append(process)
             process.start()
 
@@ -57,12 +60,10 @@ class Classifier:
         for process in processes:
             process.join()
 
-        # Sort and collect results from all processes
+        # Sort and collect results from the shared dictionary
         results = [None] * len(processes)
-        for process in processes:
-            index, y_pred = process.exitcode
-            results[index] = y_pred
-            process.join()
+        for fold_index in result_dict:
+            results[fold_index] = result_dict[fold_index]
 
         self.cv_results = results
         green("finished training model")

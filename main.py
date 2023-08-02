@@ -14,13 +14,7 @@ def process_pipe(file='data/gold.csv', save=False):
     return my_pipe
 
 
-def load_pickled_pipe(file='data.pickle'):
-    my_pipe = load_pipe(file)
-    print(my_pipe.processed)
-    return my_pipe
-
-
-if __name__ == "__main__":
+def test():
     start = time.time()
     pd.set_option('display.max_colwidth', None)
     pipe = process_pipe()
@@ -31,3 +25,13 @@ if __name__ == "__main__":
     end = time.time()
     run_time = end - start
     green("program finished in %f seconds." % run_time)
+
+
+def load_pickled_pipe(file='data.pickle'):
+    my_pipe = load_pipe(file)
+    print(my_pipe.processed)
+    return my_pipe
+
+
+if __name__ == "__main__":
+    test()

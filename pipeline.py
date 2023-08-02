@@ -39,6 +39,7 @@ class Pipe:
             self.text[i] = ' '.join(t)
         # print("self.text: length: %s type: %s" % (len(self.text), type(self.text)))
 
+
     def extract_features(self):
         self.extractor = MultiExtractor(self.text)
         self.extractor.fit()
