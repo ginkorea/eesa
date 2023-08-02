@@ -1,5 +1,5 @@
-from util import *
-from openai_utils import *
+from llm.util import *
+from llm.openai_utils import *
 
 
 class SentiChat(openai.ChatCompletion):
@@ -58,4 +58,4 @@ def create_senti_chat_bot():
             run = False
 
 
-create_senti_chat_bot()
+# create_senti_chat_bot()

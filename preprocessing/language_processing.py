@@ -5,15 +5,17 @@ from nltk.tokenize import regexp_tokenize
 import preprocessor as p
 
 
-def remove_stop_words(tokenized_text):
+def set_up_stop_words():
     # Download stopwords if not already downloaded
     nltk.download('stopwords')
     # Get the set of English stopwords
     stop_words = set(stopwords.words('english'))
+    return stop_words
 
+
+def remove_stop_words(tokenized_text, stop_words):
     # Remove stopwords from the list of words
     filtered_tokens = [token for token in tokenized_text if token.lower() not in stop_words]
-
     return filtered_tokens
 
 
@@ -45,24 +47,24 @@ def stem_text(text):
     return stemmed
 
 
-def process_text(text, tweet=False):
+def process_text(text, stop_words, tweet=True, verbose=False):
     if tweet:
         text = preprocess_twitter_text(text)
     tokenized = sentiment_tokenizer(text)
-    print("Tokenized:", tokenized)
-
-    filtered = remove_stop_words(tokenized)
-    print("Filtered:", filtered)
-
+    if verbose:
+        print("Tokenized:", tokenized)
+    filtered = remove_stop_words(tokenized, stop_words)
+    if verbose:
+        print("Filtered:", filtered)
     stemmed = stem_text(filtered)
-    print("Stemmed:", stemmed)
+    if verbose:
+        print("Stemmed:", stemmed)
 
     return stemmed
 
 
-input_text = "I love running in the mornings. Runners are running away while running shoes are running."
+def test_lp():
+    input_text = "I love running in the mornings. Runners are running away while running shoes are running."
 
-processed_text = process_text(input_text)
-print(processed_text)
-
-
+    processed_text = process_text(input_text)
+    print(processed_text)

@@ -16,15 +16,15 @@ class FeatureExtractor:
         self.vectorizer.fit(self.dataset)
 
     def text2vector(self, text_sample):
-        self.vector = self.vectorizer.transform([text_sample])
+        return self.vectorizer.transform([text_sample])
 
-    def process(self):
-        self.fit_vectorizer()
+    def process(self, verbose=True):
         for text in self.dataset:
-            self.text2vector(text)
-            print("Text:", text)
-            print("Vector:", self.vector.toarray())
-            print()
+            vector = self.text2vector(text)
+            if verbose:
+                print("Text:", text)
+                print("Vector:", vector.toarray())
+                print()
 
 
 class BagOfWords(FeatureExtractor):
@@ -52,14 +52,36 @@ class MultiExtractor:
 
     def __init__(self, data):
         self.vector = []
+        self.vector_list = []
+        self.data = data
         self.bow = BagOfWords(data)
         self.tf_idf = TermFreqInverseDocFreq(data)
         self.ngram = NGram(data)
         self.extractors = [self.bow, self.tf_idf, self.ngram]
 
-    def extract(self):
+    def fit(self):
         for extractor in self.extractors:
-            extractor.process()
+            extractor.fit_vectorizer()
+
+    def extract(self, text, verbose=False):
+        vector = []
+        parsed = []
+        for extractor in self.extractors:
+            sub_vector = extractor.text2vector(text)
+            vector.append(sub_vector.toarray())
+        for array in vector:
+            array_to_list = list(array[0])
+            for number in array_to_list:
+                parsed.append(number)
+        parsed_array = np.array(parsed)
+        if verbose:
+            print("parsed: %s" % parsed_array)
+        return parsed_array
+
+    def process(self):
+        for text in self.data:
+            vector = self.extract(text)
+            self.vector_list.append(vector)
 
     def merge(self):
         for extractor in self.extractors:
@@ -73,7 +95,7 @@ class MultiExtractor:
         return np.array(self.vector, dtype="float")
 
 
-def test():
+def test_fe():
     texts = [
         "I love running in the mornings.",
         "Runners are running away while running shoes are running.",
@@ -81,8 +103,9 @@ def test():
     ]
 
     multi = MultiExtractor(texts)
-    multi.extract()
-    multi.merge()
-    print(multi.vec2array())
+    multi.fit()
+    multi.process()
+    print(len(multi.vector_list))
+
 
 

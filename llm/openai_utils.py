@@ -1,4 +1,4 @@
-from key import my_key
+from llm.key import my_key
 import openai
 
 
