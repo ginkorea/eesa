@@ -77,3 +77,13 @@ def load_source_data():
 def load(file):
     df = pd.read_csv(file, sep='|')
     return df
+
+
+def fix_the_movies(file):
+    df = pd.read_csv(file, sep='|')
+    df['sentence'] = df['sentence'].str.replace('\n', ' ')
+    df_grouped = df.groupby('sentiment')['sentence'].apply(' '.join).reset_index()
+    df_grouped.to_csv(f'fixed_{file}', index=False, sep='|')
+
+
+# fix_the_movies('movies.csv')

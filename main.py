@@ -33,5 +33,15 @@ def load_pickled_pipe(file='data.pickle'):
     return my_pipe
 
 
+def label(file='data/gold.csv'):
+    start = time.time()
+    my_pipe = Pipe(file)
+    my_pipe.label_by_batch(batch_size=25, batch_start=550)
+    end = time.time()
+    run_time = end - start
+    green("program finished in %f seconds." % run_time)
+
+
 if __name__ == "__main__":
-    test()
+
+    label(file='data/new_movies.csv')

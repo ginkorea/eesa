@@ -2,6 +2,7 @@ import openai
 
 from llm.util import *
 from llm.openai_utils import *
+import time
 
 
 class SentiChat(openai.ChatCompletion):
@@ -46,7 +47,17 @@ class SentiChat(openai.ChatCompletion):
         self.messages.append({"role": "user", "content": self.prompt + text})
         if self.debug:
             cyan(self.messages)
-        self.response = self.create(self.messages)
+        max_retries = 5
+        retries = 0
+        while retries < max_retries:
+            try:
+                self.response = self.create(self.messages)
+                retries = 5
+            except openai.OpenAIError as e:
+                red(f"An error occurred: {e}")
+                retries += 1
+                red(f"Retrying ({retries}/{max_retries})...")
+                time.sleep(1)  # Wait for a short period before retrying
         if verbose:
             self.say_last()
         return self.response['content']
@@ -54,7 +65,7 @@ class SentiChat(openai.ChatCompletion):
 
 class SentiSummary(SentiChat):
 
-    def __init__(self, debug=True):
+    def __init__(self, debug=False):
         super().__init__()
         self.debug = debug
         self.engine = "gpt-3.5-turbo"
@@ -71,8 +82,6 @@ class SentiSummary(SentiChat):
             red(explanations)
         summary = self.classify_sentiment(explanations, verbose=verbose)
         return summary
-
-
 
 
 def create_senti_chat_bot():
