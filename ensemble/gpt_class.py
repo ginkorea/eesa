@@ -65,7 +65,11 @@ def label_row(text, numb_classifier=3, verbose=False):
     parsed_results = gpt_class.parse_results()
     parsed_results = clean_columns(parsed_results)
     column_names = ["sentiment_score", "confidence_rating", "explanation_score", "explanation"]
-    parsed_df = pd.DataFrame(data=parsed_results, columns=column_names)
+    try:
+        parsed_df = pd.DataFrame(data=parsed_results, columns=column_names)
+    except ValueError as e:
+        red("error processing parsed_results: %s \n %s" % (e, parsed_results))
+        exit()
     try:
         senti_score = parsed_df['sentiment_score'].mean()
     except TypeError as e:

@@ -23,6 +23,7 @@ def combine_csv_files(directory_path):
     combined_df.to_csv(output_file, index=False, sep='|')  # Adjust sep if needed based on your preference
 
 
-
 # Example usage:
-combine_csv_files('gold')
+combine_csv_files('new_movies')
+combine_csv_files('amazon_cells_labelled')
+

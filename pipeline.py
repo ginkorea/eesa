@@ -52,7 +52,7 @@ class Pipe:
         self.labeled[["sentiment_score", "confidence_rating", "explanation_score", "explanation"]] = pd.DataFrame(
             self.labeled['output'].tolist(), index=self.labeled.index)
         self.labeled.drop(columns=['output'], inplace=True)
-        cyan(self.labeled)
+        # cyan(self.labeled)
         self.labeled.to_csv("test_label.csv", index=False, sep="|")
         file_name = os.path.basename(self.name)
         file_name = file_name.replace('.csv', '')
