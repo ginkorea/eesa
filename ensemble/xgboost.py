@@ -9,7 +9,7 @@ import concurrent.futures
 class Classifier:
 
     def __init__(self, processed_data, n_splits=5, shuffle=True, random_state=23, max_depth=6,
-                 objective='binary:logistic', eval_metric='logloss', name='test', include_llm=False):
+                 objective='binary:logistic', eval_metric='logloss', name='test', include_llm=False, multi=False):
         self.processed_data = processed_data
         self.processed_data['results'] = np.zeros(len(self.processed_data))
         self.processed_data['fold'] = np.zeros((len(self.processed_data)))
@@ -31,6 +31,7 @@ class Classifier:
         self.k_fold = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         self.cv_results = {}  # Store results as dictionary
         self.name = "depth_" + str(max_depth) + "_" + name
+        self.multi = multi
         cyan("initialized xgboost classifier for %s" % self.name)
 
     def _train_fold(self, fold_index, train_index, test_index, boost_rounds):
@@ -50,16 +51,26 @@ class Classifier:
     def train(self, boost_rounds=100):
         results = []
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            fold_results = []
-            for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
-                fold_results.append(
-                    executor.submit(self._train_fold, fold_index, train_index, test_index, boost_rounds))
+        if self.multi:
 
-            for future in concurrent.futures.as_completed(fold_results):
-                fold_index, y_pred, test_index = future.result()
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                fold_results = []
+                for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
+                    fold_results.append(
+                        executor.submit(self._train_fold, fold_index, train_index, test_index, boost_rounds))
+
+                for future in concurrent.futures.as_completed(fold_results):
+                    fold_index, y_pred, test_index = future.result()
+                    cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
+                    results.append([fold_index, y_pred, test_index])
+
+        else:
+
+            for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
+                fold_index, y_pred, test_index = self._train_fold(fold_index, train_index, test_index, boost_rounds)
+                result = [fold_index, y_pred, test_index]
+                results.append(result)
                 cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
-                results.append([fold_index, y_pred, test_index])
 
         self.cv_results = results
         self.map_results_to_dataframe()  # Map the results to the original DataFrame
