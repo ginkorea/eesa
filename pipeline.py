@@ -5,6 +5,7 @@ from data.data import *
 from copy import copy
 import os
 from ensemble.gpt_class import label_row
+from ensemble.svm import SVMClassifier
 import time
 
 
@@ -96,6 +97,10 @@ class Pipe:
         self.process_texts()
         self.extract_features()
 
+    def classify_by_svm(self):
+        svm = SVMClassifier(self.processed)
+        return svm
+
     def save(self):
         # Extract the filename after 'data/' and remove the '.csv' extension
         file_name = os.path.basename(self.name)
@@ -141,3 +146,13 @@ def load_pipe(file_name):
     pipe.extractor.vector_list = pipe.processed['vector']
 
     return pipe
+
+
+def test_svm():
+    pipe = Pipe('labeled_data/imdb_labelled_labeled.csv')
+    pipe.process_texts()
+    pipe.extract_features()
+    svm = pipe.classify_by_svm()
+    print(svm.get_results())
+    print(len(svm.get_results()))
+    print(svm.get_params())
