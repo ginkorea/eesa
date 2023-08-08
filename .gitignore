@@ -1,0 +1,5 @@
+*.pyc
+venv/
+llm/key.py
+eesa.lml
+misc.xml
