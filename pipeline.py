@@ -15,7 +15,7 @@ class Pipe:
         self.name = dataset
         self.raw = load(dataset)
         if shrink:
-            self.shrink_dataset(size=size)
+            self.shrink(size=size)
         self.text = None
         self.processed = None
         self.extractor = None
@@ -30,8 +30,9 @@ class Pipe:
             'stop_words': self.stop_words
         })
 
-    def shrink_dataset(self, size, random_state=1):
-        self.raw = self.raw.sample(n=size, random_state=random_state)
+    def shrink(self, size):
+        self.raw = self.raw.sample(n=size, random_state=1)
+        cyan("shrank dataset to %s" % len(self.raw))
 
     def process_texts(self):
         self.processed = copy(self.raw)

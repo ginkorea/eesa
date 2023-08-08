@@ -1,14 +1,14 @@
-import pandas as pd
 import numpy as np
 from sklearn.model_selection import KFold
 import xgboost as xgb
 from llm.util import *
 import concurrent.futures
+import os
 
 
 class Classifier:
 
-    def __init__(self, processed_data, n_splits=5, shuffle=True, random_state=23, max_depth=6,
+    def __init__(self, processed_data, n_splits=5, shuffle=True, random_state=23, max_depth=3,
                  objective='binary:logistic', eval_metric='logloss', name='test', include_llm=False, multi=False):
         self.processed_data = processed_data
         self.processed_data['results'] = np.zeros(len(self.processed_data))
@@ -78,15 +78,29 @@ class Classifier:
         green("finished training xbg classifier for %s" % self.name)
 
     def map_results_to_dataframe(self):
-        for result in self.cv_results:
-            fold_index = result[0]
-            y_pred = result[1]
-            test_index = result[2]
-            self.processed_data.loc[test_index, 'results'] = y_pred
-            self.processed_data.loc[test_index, 'fold'] = fold_index
+        if self.multi:
+            cyan('cv_result: %s' % self.cv_results)
+            for result in self.cv_results:
+                yellow('result: %s' % result)
+                fold_index = result[0]
+                y_pred = result[1]
+                test_index = result[2]
+                self.processed_data.loc[test_index, 'results'] = y_pred
+                self.processed_data.loc[test_index, 'fold'] = fold_index
+        else:
+            for result in self.cv_results:
+                fold_index = result[0]
+                test_indexes = result[2]
+                for i, test_index in enumerate(test_indexes):
+                    y_pred = result[1][i]
+                    self.processed_data.loc[test_index, 'results'] = y_pred
+                    self.processed_data.loc[test_index, 'fold'] = fold_index
 
     def save_dataframe(self):
-        file = 'results/' + self.name + "_with_results.csv"
+        if os == 'nt':
+            file = 'results\\' + self.name + "_with_results.csv"
+        else:
+            file = 'results/' + self.name + "_with_results.csv"
         self.processed_data.to_csv(file, index=False, sep="|")
 
     def print_results(self):
