@@ -5,8 +5,8 @@ import time
 import pandas as pd
 
 
-def process_pipe(file='data/gold.csv', save=False):
-    my_pipe = Pipe(file)
+def process_pipe(file='data/gold.csv', save=False, shrink=False):
+    my_pipe = Pipe(file, shrink=shrink)
     my_pipe.run_pipe()
     print(my_pipe.processed)
     if save:
@@ -14,11 +14,11 @@ def process_pipe(file='data/gold.csv', save=False):
     return my_pipe
 
 
-def train_test(file, name, include_llm=False):
+def train_test(file, name, include_llm=False, shrink=False, multi=True):
     start = time.time()
     pd.set_option('display.max_colwidth', None)
-    pipe = process_pipe(file)
-    xgb_class = Classifier(pipe.processed, name=name, include_llm=include_llm)
+    pipe = process_pipe(file, shrink=shrink)
+    xgb_class = Classifier(pipe.processed, name=name, include_llm=include_llm, multi=multi)
     xgb_class.train()
     end = time.time()
     run_time = end - start
@@ -41,8 +41,7 @@ def label(file, batch_size, batch_start):
     green("program finished in %f seconds." % run_time)
 
 
-if __name__ == "__main__":
-
+def full():
     train_test('labeled_data/amazon_cells_labelled_labeled.csv', 'amazon', include_llm=True)
     train_test('labeled_data/yelp_labelled_labeled.csv', 'yelp', include_llm=True)
     train_test('labeled_data/imdb_labelled_labeled.csv', 'imdb', include_llm=True)
@@ -51,3 +50,12 @@ if __name__ == "__main__":
     train_test('labeled_data/yelp_labelled_labeled.csv', 'yelp')
     train_test('labeled_data/imdb_labelled_labeled.csv', 'imdb')
     train_test('labeled_data/gold_labeled.csv', 'gold')
+
+
+def the_movies():
+    train_test('labeled_data/new_movies_labeled.csv', 'movies_1000', include_llm=True, shrink=True, multi=False)
+    train_test('labeled_data/new_movies_labeled.csv', 'movies_1000', shrink=True, multi=False)
+
+
+if __name__ == "__main__":
+    the_movies()
