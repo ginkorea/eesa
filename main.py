@@ -14,13 +14,13 @@ def process_pipe(file='data/gold.csv', save=False, shrink=False):
     return my_pipe
 
 
-def train_test(file, name, include_llm=False, shrink=False, multi=True):
+def train_test(file, name, include_llm=False, shrink=False, multi=True, depth=3):
     start = time.time()
     # pd.set_option('display.max_colwidth', None)
     cyan("starting to process %s" % file)
     pipe = process_pipe(file, shrink=shrink)
     cyan("initializing classifier for %s" % name)
-    xgb_class = Classifier(pipe.processed, name=name, include_llm=include_llm, multi=multi)
+    xgb_class = Classifier(pipe.processed, name=name, include_llm=include_llm, multi=multi, max_depth=depth)
     # Create a Classifier object
     cyan("starting to test %s" % name)
     pd.set_option('display.max_colwidth', None)
@@ -58,9 +58,11 @@ def full():
 
 
 def the_movies(shrink=True, multi=False):
-    train_test('labeled_data/new_movies_labeled.csv', 'movies_1000', include_llm=True, shrink=shrink, multi=multi)
-    train_test('labeled_data/new_movies_labeled.csv', 'movies_1000', include_llm=False, shrink=shrink,
-               multi=multi)
+    for i in range(1, 11):
+        train_test('labeled_data/new_movies_labeled.csv', 'movies_1000', include_llm=True, shrink=shrink,
+                   multi=multi, depth=i)
+        train_test('labeled_data/new_movies_labeled.csv', 'movies_1000', include_llm=False, shrink=shrink,
+                   multi=multi, depth=i)
 
 
 if __name__ == "__main__":

@@ -53,11 +53,18 @@ class Metric:
         return [self.p, self.a, self.r]
 
 
-m = Metric('gold_with_results.csv')
-n = Metric('gold_with_llm_results_with_results.csv')
-o = Metric('depth_6_gold_with_results.csv')
-p = Metric('depth_6_gold_with_llm_results_with_results.csv')
-results_1 = m.results()
-results_2 = n.results()
-results_3 = o.results()
-results_4 = p.results()
+def test_gold():
+    m = Metric('gold_with_results.csv')
+    n = Metric('gold_with_llm_results_with_results.csv')
+    o = Metric('depth_6_gold_with_results.csv')
+    p = Metric('depth_6_gold_with_llm_results_with_results.csv')
+    results_1 = m.results()
+    results_2 = n.results()
+    results_3 = o.results()
+    results_4 = p.results()
+
+
+m = Metric('depth_3_movies_1000_with_results.csv')
+n = Metric('depth_3_movies_1000_with_llm_results_with_results.csv')
+results_m = m.results()
+results_n = n.results()

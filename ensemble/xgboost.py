@@ -30,6 +30,7 @@ class Classifier:
         }
         self.k_fold = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         self.cv_results = {}  # Store results as dictionary
+        self.short_name = name
         self.name = "depth_" + str(max_depth) + "_" + name
         self.multi = multi
         cyan("initialized xgboost classifier for %s" % self.name)
@@ -98,9 +99,15 @@ class Classifier:
 
     def save_dataframe(self):
         if os == 'nt':
-            file = 'results\\' + self.name + "_with_results.csv"
+            file = 'results\\' + self.short_name + "\\" + self.name + "_with_results.csv"
         else:
-            file = 'results/' + self.name + "_with_results.csv"
+            file = 'results/' + self.short_name + "/" + self.name + "_with_results.csv"
+
+        # Get the directory path from the file path
+        dir_path = os.path.dirname(file)
+
+        # Create the directory if it doesn't exist
+        os.makedirs(dir_path, exist_ok=True)
         self.processed_data.to_csv(file, index=False, sep="|")
 
     def print_results(self):
