@@ -10,14 +10,12 @@ import time
 
 class Pipe:
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, shrink=False, size=1000):
         self.stop_words = set_up_stop_words()
-        if dataset:
-            self.name = dataset
-            self.raw = load(dataset)
-        else:
-            self.name = None
-            self.raw = None
+        self.name = dataset
+        self.raw = load(dataset)
+        if shrink:
+            self.shrink_dataset(size=size)
         self.text = None
         self.processed = None
         self.extractor = None
@@ -31,6 +29,9 @@ class Pipe:
             'extractor': self.extractor,
             'stop_words': self.stop_words
         })
+
+    def shrink_dataset(self, size, random_state=1):
+        self.raw = self.raw.sample(n=size, random_state=random_state)
 
     def process_texts(self):
         self.processed = copy(self.raw)
