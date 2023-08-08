@@ -5,8 +5,8 @@ from data.data import *
 from copy import copy
 import os
 from ensemble.gpt_class import label_row
-from ensemble.svm import SVMClassifier
 import time
+import ensemble.weak as weak
 
 
 class Pipe:
@@ -97,9 +97,13 @@ class Pipe:
         self.process_texts()
         self.extract_features()
 
-    def classify_by_svm(self):
-        svm = SVMClassifier(self.processed)
-        return svm
+    def create_weak_classifiers(self):
+        svm_classifier = weak.SVMClassifier(self.processed)
+        naive_bayes_classifier = weak.NaiveBayesClassifier(self.processed)
+        logistic_regression_classifier = weak.LogisticRegressionClassifier(self.processed)
+        random_forest_classifier = weak.RandomForestClassifierWrapper(self.processed)
+
+        return svm_classifier, naive_bayes_classifier, logistic_regression_classifier, random_forest_classifier
 
     def save(self):
         # Extract the filename after 'data/' and remove the '.csv' extension
@@ -148,11 +152,15 @@ def load_pipe(file_name):
     return pipe
 
 
-def test_svm():
+def test_weak():
     pipe = Pipe('labeled_data/imdb_labelled_labeled.csv')
     pipe.process_texts()
     pipe.extract_features()
-    svm = pipe.classify_by_svm()
-    print(svm.get_results())
-    print(len(svm.get_results()))
-    print(svm.get_params())
+    svm, naive, log, rf = pipe.create_weak_classifiers()
+    classifiers = [svm, naive, log, rf]
+    for classifier in classifiers:
+        pred = classifier.get_results()
+        print(pred)
+
+
+test_weak()
