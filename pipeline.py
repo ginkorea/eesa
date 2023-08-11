@@ -10,7 +10,6 @@ import ensemble.weak as weak
 
 
 class Pipe:
-
     def __init__(self, dataset, shrink=False, size=1000):
         self.stop_words = set_up_stop_words()
         self.name = dataset
@@ -24,12 +23,16 @@ class Pipe:
 
     def __reduce__(self):
         # Return a tuple with the callable, arguments, and the state (all attributes needed for recreation)
-        return (self.__class__, (self.name,), {
-            'text': self.text,
-            'processed': self.processed,
-            'extractor': self.extractor,
-            'stop_words': self.stop_words
-        })
+        return (
+            self.__class__,
+            (self.name,),
+            {
+                "text": self.text,
+                "processed": self.processed,
+                "extractor": self.extractor,
+                "stop_words": self.stop_words,
+            },
+        )
 
     def shrink(self, size):
         self.raw = self.raw.sample(n=size, random_state=1)
@@ -37,11 +40,13 @@ class Pipe:
 
     def process_texts(self):
         self.processed = copy(self.raw)
-        self.processed = self.processed.assign(processed=self.processed['sentence'])
-        self.processed['processed'] = self.processed['processed'].apply(process_text, args=(self.stop_words,))
-        self.text = list(self.processed['processed'])
+        self.processed = self.processed.assign(processed=self.processed["sentence"])
+        self.processed["processed"] = self.processed["processed"].apply(
+            process_text, args=(self.stop_words,)
+        )
+        self.text = list(self.processed["processed"])
         for i, t in enumerate(self.text):
-            self.text[i] = ' '.join(t)
+            self.text[i] = " ".join(t)
         # print("self.text: length: %s type: %s" % (len(self.text), type(self.text)))
 
     def label_texts(self, test=False, batch=True, start=0, stop=10):
@@ -51,18 +56,23 @@ class Pipe:
             self.labeled = self.labeled.head(3)
         if batch:
             self.labeled = self.labeled[start:stop]
-        self.labeled['output'] = self.labeled.apply(lambda row: label_row(row['sentence']), axis=1)
-        self.labeled[["sentiment_score", "confidence_rating", "explanation_score", "explanation"]] = pd.DataFrame(
-            self.labeled['output'].tolist(), index=self.labeled.index)
-        self.labeled.drop(columns=['output'], inplace=True)
+        self.labeled["output"] = self.labeled.apply(
+            lambda row: label_row(row["sentence"]), axis=1
+        )
+        self.labeled[
+            ["sentiment_score", "confidence_rating", "explanation_score", "explanation"]
+        ] = pd.DataFrame(self.labeled["output"].tolist(), index=self.labeled.index)
+        self.labeled.drop(columns=["output"], inplace=True)
         # cyan(self.labeled)
         self.labeled.to_csv("test_label.csv", index=False, sep="|")
         file_name = os.path.basename(self.name)
-        file_name = file_name.replace('.csv', '')
+        file_name = file_name.replace(".csv", "")
         save_dir = f"labeled_data/{file_name}"  # Specify the directory path where you want to save the data
         os.makedirs(save_dir, exist_ok=True)  # Create the directory if it doesn't exist
         if batch:
-            labeled_csv_path = os.path.join(save_dir, f"batch_{start}_{stop}_labeled.csv")
+            labeled_csv_path = os.path.join(
+                save_dir, f"batch_{start}_{stop}_labeled.csv"
+            )
         else:
             labeled_csv_path = os.path.join(save_dir, f"full_labeled.csv")
         self.labeled.to_csv(labeled_csv_path, index=False, sep="|")
@@ -74,24 +84,34 @@ class Pipe:
         batch_end = batch_start + batch_size
         while batch_end < final:
             start_time = time.time()
-            batch_start, batch_end = self.label_texts(batch=True, start=batch_start, stop=batch_end)
+            batch_start, batch_end = self.label_texts(
+                batch=True, start=batch_start, stop=batch_end
+            )
             end_time = time.time()
             run_time = end_time - start_time
-            green("finished processing batch %s - %s in %s seconds" % (batch_start, batch_end, run_time))
+            green(
+                "finished processing batch %s - %s in %s seconds"
+                % (batch_start, batch_end, run_time)
+            )
             batch_start = batch_end
             batch_end += batch_size
         if batch_start < final:
             start_time = time.time()
-            batch_start, batch_end = self.label_texts(batch=True, start=batch_start, stop=final)
+            batch_start, batch_end = self.label_texts(
+                batch=True, start=batch_start, stop=final
+            )
             end_time = time.time()
             run_time = end_time - start_time
-            green("finished processing final batch %s - %s in %s seconds" % (batch_start, final, run_time))
+            green(
+                "finished processing final batch %s - %s in %s seconds"
+                % (batch_start, final, run_time)
+            )
 
     def extract_features(self):
         self.extractor = MultiExtractor(self.text)
         self.extractor.fit()
         self.extractor.process()
-        self.processed['vector'] = self.extractor.vector_list
+        self.processed["vector"] = self.extractor.vector_list
 
     def run_pipe(self):
         self.process_texts()
@@ -100,15 +120,22 @@ class Pipe:
     def create_weak_classifiers(self):
         svm_classifier = weak.SVMClassifier(self.processed)
         naive_bayes_classifier = weak.NaiveBayesClassifier(self.processed)
-        logistic_regression_classifier = weak.LogisticRegressionClassifier(self.processed)
+        logistic_regression_classifier = weak.LogisticRegressionClassifier(
+            self.processed
+        )
         random_forest_classifier = weak.RandomForestClassifierWrapper(self.processed)
 
-        return svm_classifier, naive_bayes_classifier, logistic_regression_classifier, random_forest_classifier
+        return (
+            svm_classifier,
+            naive_bayes_classifier,
+            logistic_regression_classifier,
+            random_forest_classifier,
+        )
 
     def save(self):
         # Extract the filename after 'data/' and remove the '.csv' extension
         file_name = os.path.basename(self.name)
-        file_name = file_name.replace('.csv', '')
+        file_name = file_name.replace(".csv", "")
         save_dir = "labeled_data/"  # Specify the directory path where you want to save the data
         os.makedirs(save_dir, exist_ok=True)  # Create the directory if it doesn't exist
 
@@ -147,20 +174,22 @@ def load_pipe(file_name):
     # Refit the extractor
     pipe.extractor = MultiExtractor(pipe.text)
     pipe.extractor.fit()
-    pipe.extractor.vector_list = pipe.processed['vector']
+    pipe.extractor.vector_list = pipe.processed["vector"]
 
     return pipe
 
 
 def test_weak():
-    pipe = Pipe('results/amazon_with_results.csv')
+    pipe = Pipe("results/amazon_with_results.csv")
     pipe.process_texts()
     pipe.extract_features()
     svm, naive, log, rf = pipe.create_weak_classifiers()
     classifiers = [svm, naive, log, rf]
     for classifier in classifiers:
+        yellow("calculating %s without llm" % classifier.column)
         pred = classifier.fit_and_evaluate()
-        yellow(pred)
+        cyan("calculating %s with llm" % classifier.column)
+        pred = classifier.fit_and_evaluate(include_llm=True)
 
 
 test_weak()

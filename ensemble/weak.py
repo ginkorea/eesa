@@ -6,34 +6,55 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 import numpy as np
+from ensemble.xgboost import include_llm_vector
 
 
 class WeakClassifier:
-
     def __init__(self, dataset, random_state=42):
         self.dataset = dataset
         self.random_state = random_state
-        self.x = np.vstack(self.dataset['vector'].values)
-        self.y = np.vstack(self.dataset['sentiment'].values)
+        self.x = np.vstack(self.dataset["vector"].values)
+        self.y = np.vstack(self.dataset["sentiment"].values)
         self.y = self.y.ravel()
         self.model = None
+        self.column = None
 
-    def fit_and_evaluate(self):
+    def fit_and_evaluate(self, include_llm=False):
+        if include_llm:
+            self.dataset["vector"] = self.dataset.apply(include_llm_vector, axis=1)
         # Perform cross-validation and get predicted labels for each fold
-        y_pred = cross_val_predict(self.model, self.x, self.y, cv=self.dataset['fold'].nunique())
+        y_pred = cross_val_predict(
+            self.model, self.x, self.y, cv=self.dataset["fold"].nunique()
+        )
 
         # Calculate accuracy using cross_val_score
-        accuracy_scores = cross_val_score(self.model, self.x, self.y, cv=self.dataset['fold'].nunique(),
-                                          scoring='accuracy')
+        accuracy_scores = cross_val_score(
+            self.model,
+            self.x,
+            self.y,
+            cv=self.dataset["fold"].nunique(),
+            scoring="accuracy",
+        )
         mean_accuracy = np.mean(accuracy_scores)
 
         # Calculate precision using cross_val_score
-        precision_scores = cross_val_score(self.model, self.x, self.y, cv=self.dataset['fold'].nunique(),
-                                           scoring='precision')
+        precision_scores = cross_val_score(
+            self.model,
+            self.x,
+            self.y,
+            cv=self.dataset["fold"].nunique(),
+            scoring="precision",
+        )
         mean_precision = np.mean(precision_scores)
 
         # Calculate recall using cross_val_score
-        recall_scores = cross_val_score(self.model, self.x, self.y, cv=self.dataset['fold'].nunique(), scoring='recall')
+        recall_scores = cross_val_score(
+            self.model,
+            self.x,
+            self.y,
+            cv=self.dataset["fold"].nunique(),
+            scoring="recall",
+        )
         mean_recall = np.mean(recall_scores)
 
         print("Mean Accuracy: %s" % mean_accuracy)
@@ -44,40 +65,40 @@ class WeakClassifier:
 
 
 class SVMClassifier(WeakClassifier):
-
     def __init__(self, dataset):
         super().__init__(dataset)
         self.load_model()
+        self.column = "SVM"
 
-    def load_model(self, kernel='rbf'):
+    def load_model(self, kernel="rbf"):
         self.model = SVC(kernel=kernel, random_state=self.random_state)
 
 
 class NaiveBayesClassifier(WeakClassifier):
-
     def __init__(self, dataset):
         super().__init__(dataset)
         self.load_model()
+        self.column = "NB"
 
     def load_model(self):
         self.model = MultinomialNB()
 
 
 class LogisticRegressionClassifier(WeakClassifier):
-
     def __init__(self, dataset):
         super().__init__(dataset)
         self.load_model()
+        self.column = "LR"
 
     def load_model(self):
         self.model = LogisticRegression(random_state=self.random_state)
 
 
 class RandomForestClassifierWrapper(WeakClassifier):
-
     def __init__(self, dataset):
         super().__init__(dataset)
         self.load_model()
+        self.column = "RF"
 
     def load_model(self):
         self.model = RandomForestClassifier(random_state=self.random_state)

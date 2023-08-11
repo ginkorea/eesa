@@ -7,31 +7,45 @@ import os
 
 
 class Classifier:
-
-    def __init__(self, processed_data, n_splits=5, shuffle=True, random_state=23, max_depth=3,
-                 objective='binary:logistic', eval_metric='logloss', name='test', include_llm=False, multi=False,
-                 folded=False):
+    def __init__(
+        self,
+        processed_data,
+        n_splits=5,
+        shuffle=True,
+        random_state=23,
+        max_depth=3,
+        objective="binary:logistic",
+        eval_metric="logloss",
+        name="test",
+        include_llm=False,
+        multi=False,
+        folded=False,
+    ):
         self.processed_data = processed_data
-        self.processed_data['results'] = np.zeros(len(self.processed_data))
-        self.processed_data['fold'] = np.zeros((len(self.processed_data)))
+        self.processed_data["results"] = np.zeros(len(self.processed_data))
+        self.processed_data["fold"] = np.zeros((len(self.processed_data)))
         if include_llm:
-            self.processed_data['vector'] = self.processed_data.apply(include_llm_vector, axis=1)
+            self.processed_data["vector"] = self.processed_data.apply(
+                include_llm_vector, axis=1
+            )
             name = name + "_with_llm_results"
         # yellow(self.processed_data)
-        self.x = np.vstack(self.processed_data['vector'].values)
+        self.x = np.vstack(self.processed_data["vector"].values)
         # cyan(self.x)
-        self.y = np.vstack(self.processed_data['sentiment'].values)
+        self.y = np.vstack(self.processed_data["sentiment"].values)
         # yellow(self.y)
         self.parameters = {
-            'objective': objective,
-            'eval_metric': eval_metric,
-            'max_depth': max_depth,
-            'eta': 0.1,
-            'seed': random_state
+            "objective": objective,
+            "eval_metric": eval_metric,
+            "max_depth": max_depth,
+            "eta": 0.1,
+            "seed": random_state,
         }
         self.folded = folded
         if not self.folded:
-            self.k_fold = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+            self.k_fold = KFold(
+                n_splits=n_splits, shuffle=shuffle, random_state=random_state
+            )
             yellow("K - FOLD")
             yellow(self.k_fold)
         self.cv_results = {}  # Store results as dictionary
@@ -58,40 +72,84 @@ class Classifier:
         results = []
 
         if self.multi:
-
             with concurrent.futures.ProcessPoolExecutor() as executor:
                 fold_results = []
                 if not self.folded:
-                    for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
+                    for fold_index, (train_index, test_index) in enumerate(
+                        self.k_fold.split(self.x)
+                    ):
                         fold_results.append(
-                            executor.submit(self._train_fold, fold_index, train_index, test_index, boost_rounds))
+                            executor.submit(
+                                self._train_fold,
+                                fold_index,
+                                train_index,
+                                test_index,
+                                boost_rounds,
+                            )
+                        )
                 else:
                     for i in range(0, 5):
-                        fold_index, test_index, train_index = self.extract_test_train_index_for_fold(i)
-                        cyan("fold_index: %s; test_index: %s; train_index: %s" % (fold_index, test_index, train_index))
+                        (
+                            fold_index,
+                            test_index,
+                            train_index,
+                        ) = self.extract_test_train_index_for_fold(i)
+                        cyan(
+                            "fold_index: %s; test_index: %s; train_index: %s"
+                            % (fold_index, test_index, train_index)
+                        )
                         fold_results.append(
-                            executor.submit(self._train_fold, fold_index, train_index, test_index, boost_rounds))
+                            executor.submit(
+                                self._train_fold,
+                                fold_index,
+                                train_index,
+                                test_index,
+                                boost_rounds,
+                            )
+                        )
 
                 for future in concurrent.futures.as_completed(fold_results):
                     fold_index, y_pred, test_index = future.result()
-                    cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
+                    cyan(
+                        "fold index = %s; y_pred =  %s; test_index= %s"
+                        % (fold_index, y_pred, test_index)
+                    )
                     results.append([fold_index, y_pred, test_index])
 
         else:
             if not self.folded:
-                for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
-                    fold_index, y_pred, test_index = self._train_fold(fold_index, train_index, test_index, boost_rounds)
+                for fold_index, (train_index, test_index) in enumerate(
+                    self.k_fold.split(self.x)
+                ):
+                    fold_index, y_pred, test_index = self._train_fold(
+                        fold_index, train_index, test_index, boost_rounds
+                    )
                     result = [fold_index, y_pred, test_index]
                     results.append(result)
-                    cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
+                    cyan(
+                        "fold index = %s; y_pred =  %s; test_index= %s"
+                        % (fold_index, y_pred, test_index)
+                    )
             else:
                 for i in range(0, 5):
-                    fold_index, test_index, train_index = self.extract_test_train_index_for_fold(i)
-                    cyan("fold_index: %s; test_index: %s; train_index: %s" % (fold_index, test_index, train_index))
-                    fold_index, y_pred, test_index = self._train_fold(fold_index, train_index, test_index, boost_rounds)
+                    (
+                        fold_index,
+                        test_index,
+                        train_index,
+                    ) = self.extract_test_train_index_for_fold(i)
+                    cyan(
+                        "fold_index: %s; test_index: %s; train_index: %s"
+                        % (fold_index, test_index, train_index)
+                    )
+                    fold_index, y_pred, test_index = self._train_fold(
+                        fold_index, train_index, test_index, boost_rounds
+                    )
                     result = [fold_index, y_pred, test_index]
                     results.append(result)
-                    cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
+                    cyan(
+                        "fold index = %s; y_pred =  %s; test_index= %s"
+                        % (fold_index, y_pred, test_index)
+                    )
 
         self.cv_results = results
         self.map_results_to_dataframe()  # Map the results to the original DataFrame
@@ -101,26 +159,26 @@ class Classifier:
 
     def map_results_to_dataframe(self):
         if self.multi:
-            cyan('cv_result: %s' % self.cv_results)
+            cyan("cv_result: %s" % self.cv_results)
             for result in self.cv_results:
-                yellow('result: %s' % result)
+                yellow("result: %s" % result)
                 fold_index = result[0]
                 y_pred = result[1]
                 test_index = result[2]
-                self.processed_data.loc[test_index, 'results'] = y_pred
-                self.processed_data.loc[test_index, 'fold'] = fold_index
+                self.processed_data.loc[test_index, "results"] = y_pred
+                self.processed_data.loc[test_index, "fold"] = fold_index
         else:
             for result in self.cv_results:
                 fold_index = result[0]
                 test_indexes = result[2]
                 for i, test_index in enumerate(test_indexes):
                     y_pred = result[1][i]
-                    self.processed_data.loc[test_index, 'results'] = y_pred
-                    self.processed_data.loc[test_index, 'fold'] = fold_index
+                    self.processed_data.loc[test_index, "results"] = y_pred
+                    self.processed_data.loc[test_index, "fold"] = fold_index
 
     def extract_test_train_index_for_fold(self, fold_index):
         red("Fold Index %s" % fold_index)
-        fold = self.processed_data['fold'] == float(fold_index)
+        fold = self.processed_data["fold"] == float(fold_index)
         red("Fold is: %s" % fold)
         fold_data = self.processed_data[fold]
         red("Fold Data: %s" % fold_data)
@@ -131,10 +189,12 @@ class Classifier:
         return fold_index, test_index, train_index
 
     def save_dataframe(self):
-        if os == 'nt':
-            file = 'results\\' + self.short_name + "\\" + self.name + "_with_results.csv"
+        if os == "nt":
+            file = (
+                "results\\" + self.short_name + "\\" + self.name + "_with_results.csv"
+            )
         else:
-            file = 'results/' + self.short_name + "/" + self.name + "_with_results.csv"
+            file = "results/" + self.short_name + "/" + self.name + "_with_results.csv"
 
         # Get the directory path from the file path
         dir_path = os.path.dirname(file)
@@ -147,12 +207,19 @@ class Classifier:
         cyan(self.cv_results)
 
 
-def include_llm_vector(row):
-    original_vector = row['vector']
-    senti_score = row['sentiment_score']
-    conf_rate = row['confidence_rating']
-    expl_score = row['explanation_score']
-    cyan('senti_score: %s; conf_rate: %s; expl_score: %s' % (senti_score, conf_rate, expl_score))
-    modified_vector = np.concatenate([original_vector, [senti_score, conf_rate, expl_score]])
-    yellow('modified vector: %s' % modified_vector[-5:])
+def include_llm_vector(row, verbose=False):
+    original_vector = row["vector"]
+    senti_score = row["sentiment_score"]
+    conf_rate = row["confidence_rating"]
+    expl_score = row["explanation_score"]
+    if verbose:
+        cyan(
+            "senti_score: %s; conf_rate: %s; expl_score: %s"
+            % (senti_score, conf_rate, expl_score)
+        )
+    modified_vector = np.concatenate(
+        [original_vector, [senti_score, conf_rate, expl_score]]
+    )
+    if verbose:
+        yellow("modified vector: %s" % modified_vector[-5:])
     return modified_vector
