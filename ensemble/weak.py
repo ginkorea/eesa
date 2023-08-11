@@ -1,9 +1,10 @@
+import pandas as pd
 from sklearn.model_selection import cross_val_predict, cross_val_score
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 import numpy as np
 
 
@@ -18,19 +19,28 @@ class WeakClassifier:
         self.model = None
 
     def fit_and_evaluate(self):
-        # Perform five-fold cross-validation and get predicted labels for each fold
-        y_pred = cross_val_predict(self.model, self.x, self.y, cv=5)
+        # Perform cross-validation and get predicted labels for each fold
+        y_pred = cross_val_predict(self.model, self.x, self.y, cv=self.dataset['fold'].nunique())
 
         # Calculate accuracy using cross_val_score
-        accuracy_scores = cross_val_score(self.model, self.x, self.y, cv=5, scoring='accuracy')
+        accuracy_scores = cross_val_score(self.model, self.x, self.y, cv=self.dataset['fold'].nunique(),
+                                          scoring='accuracy')
         mean_accuracy = np.mean(accuracy_scores)
 
+        # Calculate precision using cross_val_score
+        precision_scores = cross_val_score(self.model, self.x, self.y, cv=self.dataset['fold'].nunique(),
+                                           scoring='precision')
+        mean_precision = np.mean(precision_scores)
+
+        # Calculate recall using cross_val_score
+        recall_scores = cross_val_score(self.model, self.x, self.y, cv=self.dataset['fold'].nunique(), scoring='recall')
+        mean_recall = np.mean(recall_scores)
+
         print("Mean Accuracy: %s" % mean_accuracy)
+        print("Mean Precision: %s" % mean_precision)
+        print("Mean Recall: %s" % mean_recall)
 
-        return y_pred
-
-    def get_results(self):
-        return self.fit_and_evaluate()
+        return y_pred, mean_accuracy, mean_precision, mean_recall
 
 
 class SVMClassifier(WeakClassifier):
@@ -71,6 +81,3 @@ class RandomForestClassifierWrapper(WeakClassifier):
 
     def load_model(self):
         self.model = RandomForestClassifier(random_state=self.random_state)
-
-
-

@@ -153,14 +153,14 @@ def load_pipe(file_name):
 
 
 def test_weak():
-    pipe = Pipe('labeled_data/imdb_labelled_labeled.csv')
+    pipe = Pipe('results/amazon_with_results.csv')
     pipe.process_texts()
     pipe.extract_features()
     svm, naive, log, rf = pipe.create_weak_classifiers()
     classifiers = [svm, naive, log, rf]
     for classifier in classifiers:
-        pred = classifier.get_results()
-        print(pred)
+        pred = classifier.fit_and_evaluate()
+        yellow(pred)
 
 
 test_weak()

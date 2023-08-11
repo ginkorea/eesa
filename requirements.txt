@@ -5,3 +5,5 @@ pandas~=2.0.1
 spacy~=3.6.0
 openai~=0.27.8
 xgboost~=1.7.6
+scipy~=1.11.1
+matplotlib~=3.7.1

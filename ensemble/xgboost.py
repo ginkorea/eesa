@@ -9,7 +9,8 @@ import os
 class Classifier:
 
     def __init__(self, processed_data, n_splits=5, shuffle=True, random_state=23, max_depth=3,
-                 objective='binary:logistic', eval_metric='logloss', name='test', include_llm=False, multi=False):
+                 objective='binary:logistic', eval_metric='logloss', name='test', include_llm=False, multi=False,
+                 folded=False):
         self.processed_data = processed_data
         self.processed_data['results'] = np.zeros(len(self.processed_data))
         self.processed_data['fold'] = np.zeros((len(self.processed_data)))
@@ -28,7 +29,11 @@ class Classifier:
             'eta': 0.1,
             'seed': random_state
         }
-        self.k_fold = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+        self.folded = folded
+        if not self.folded:
+            self.k_fold = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+            yellow("K - FOLD")
+            yellow(self.k_fold)
         self.cv_results = {}  # Store results as dictionary
         self.short_name = name
         self.name = "depth_" + str(max_depth) + "_" + name
@@ -56,9 +61,16 @@ class Classifier:
 
             with concurrent.futures.ProcessPoolExecutor() as executor:
                 fold_results = []
-                for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
-                    fold_results.append(
-                        executor.submit(self._train_fold, fold_index, train_index, test_index, boost_rounds))
+                if not self.folded:
+                    for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
+                        fold_results.append(
+                            executor.submit(self._train_fold, fold_index, train_index, test_index, boost_rounds))
+                else:
+                    for i in range(0, 5):
+                        fold_index, test_index, train_index = self.extract_test_train_index_for_fold(i)
+                        cyan("fold_index: %s; test_index: %s; train_index: %s" % (fold_index, test_index, train_index))
+                        fold_results.append(
+                            executor.submit(self._train_fold, fold_index, train_index, test_index, boost_rounds))
 
                 for future in concurrent.futures.as_completed(fold_results):
                     fold_index, y_pred, test_index = future.result()
@@ -66,16 +78,25 @@ class Classifier:
                     results.append([fold_index, y_pred, test_index])
 
         else:
-
-            for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
-                fold_index, y_pred, test_index = self._train_fold(fold_index, train_index, test_index, boost_rounds)
-                result = [fold_index, y_pred, test_index]
-                results.append(result)
-                cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
+            if not self.folded:
+                for fold_index, (train_index, test_index) in enumerate(self.k_fold.split(self.x)):
+                    fold_index, y_pred, test_index = self._train_fold(fold_index, train_index, test_index, boost_rounds)
+                    result = [fold_index, y_pred, test_index]
+                    results.append(result)
+                    cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
+            else:
+                for i in range(0, 5):
+                    fold_index, test_index, train_index = self.extract_test_train_index_for_fold(i)
+                    cyan("fold_index: %s; test_index: %s; train_index: %s" % (fold_index, test_index, train_index))
+                    fold_index, y_pred, test_index = self._train_fold(fold_index, train_index, test_index, boost_rounds)
+                    result = [fold_index, y_pred, test_index]
+                    results.append(result)
+                    cyan("fold index = %s; y_pred =  %s; test_index= %s" % (fold_index, y_pred, test_index))
 
         self.cv_results = results
         self.map_results_to_dataframe()  # Map the results to the original DataFrame
-        self.save_dataframe()  # Save the entire DataFrame with results and mapping
+        if not self.folded:
+            self.save_dataframe()  # Save the entire DataFrame with results and mapping
         green("finished training xbg classifier for %s" % self.name)
 
     def map_results_to_dataframe(self):
@@ -96,6 +117,18 @@ class Classifier:
                     y_pred = result[1][i]
                     self.processed_data.loc[test_index, 'results'] = y_pred
                     self.processed_data.loc[test_index, 'fold'] = fold_index
+
+    def extract_test_train_index_for_fold(self, fold_index):
+        red("Fold Index %s" % fold_index)
+        fold = self.processed_data['fold'] == float(fold_index)
+        red("Fold is: %s" % fold)
+        fold_data = self.processed_data[fold]
+        red("Fold Data: %s" % fold_data)
+        test_index = fold_data.index
+        cyan("Test Index: %s" % test_index)
+        train_index = self.processed_data.index.difference(test_index)
+        cyan("Train Index: %s" % train_index)
+        return fold_index, test_index, train_index
 
     def save_dataframe(self):
         if os == 'nt':

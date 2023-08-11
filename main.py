@@ -14,13 +14,14 @@ def process_pipe(file='data/gold.csv', save=False, shrink=False):
     return my_pipe
 
 
-def train_test(file, name, include_llm=False, shrink=False, multi=True, depth=3):
+def train_test(file, name, include_llm=False, shrink=False, multi=True, depth=3, folded=False):
     start = time.time()
     # pd.set_option('display.max_colwidth', None)
     cyan("starting to process %s" % file)
     pipe = process_pipe(file, shrink=shrink)
     cyan("initializing classifier for %s" % name)
-    xgb_class = Classifier(pipe.processed, name=name, include_llm=include_llm, multi=multi, max_depth=depth)
+    xgb_class = Classifier(pipe.processed, name=name, include_llm=include_llm, multi=multi, max_depth=depth,
+                           folded=folded)
     # Create a Classifier object
     cyan("starting to test %s" % name)
     pd.set_option('display.max_colwidth', None)
@@ -66,4 +67,5 @@ def the_movies(shrink=True, multi=False):
 
 
 if __name__ == "__main__":
-    the_movies()
+
+    train_test("labeled_data/amazon_cells_labelled_labeled.csv", 'amazon', include_llm=True, folded=False)
