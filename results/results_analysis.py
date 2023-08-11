@@ -50,17 +50,27 @@ class FoldParser:
 
 
 class Metric:
-    def __init__(self, fold, true="sentiment", label="results"):
+    def __init__(self, fold, true="sentiment", label="results", transform=False):
         self.data = fold
-        self.results_to_binary()
+        if transform:
+            self.transform_senti_score()
+            self.results_to_binary(results="sentiment_score")
+        else:
+            self.results_to_binary()
         self.true = self.data[true]
         self.label = self.data[label]
         self.p = self.precision()
         self.a = self.accuracy()
         self.r = self.recall()
 
-    def results_to_binary(self):
-        self.data["results"] = self.data["results"].apply(lambda x: 1 if x > 0.5 else 0)
+    def results_to_binary(self, results="results"):
+        self.data[results] = self.data[results].apply(lambda x: 1 if x > 0.5 else 0)
+
+    def transform_senti_score(self):
+        """Transform the sentiment score to be between 0 and 1"""
+        self.data["sentiment_score"] = self.data["sentiment_score"].apply(
+            lambda x: (x + 1) / 2
+        )
 
     def correct_predictions(self):
         correct_predictions = np.sum(np.array(self.true) == np.array(self.label))
@@ -177,4 +187,13 @@ def test_graph():
     confidence_graph.plot_confidence_intervals()
 
 
-test_graph()
+def senti_score_metrics(file):
+    df = pd.read_csv(file, sep="|")
+    metrics = Metric(df, true="sentiment", label="sentiment_score", transform=True)
+    metrics.results()
+
+senti_score_metrics("amazon_with_llm_results_with_results.csv")
+senti_score_metrics("yelp_with_llm_results_with_results.csv")
+senti_score_metrics("imdb_with_llm_results_with_results.csv")
+senti_score_metrics("gold_with_llm_results_with_results.csv")
+senti_score_metrics("movies_1000_with_llm_results/depth_3_movies_1000_with_llm_results_with_results.csv")

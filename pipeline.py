@@ -183,11 +183,15 @@ def test_weak():
     pipe = Pipe("results/amazon_with_results.csv")
     pipe.process_texts()
     pipe.extract_features()
-    svm, naive, log, rf = pipe.create_weak_classifiers()
-    classifiers = [svm, naive, log, rf]
-    for classifier in classifiers:
+    pipe2 = copy(pipe)
+    svm1, naive1, log1, rf1 = pipe.create_weak_classifiers()
+    classifiers1 = [svm1, naive1, log1, rf1]
+    for classifier in classifiers1:
         yellow("calculating %s without llm" % classifier.column)
         pred = classifier.fit_and_evaluate()
+    svm2, naive2, log2, rf2 = pipe2.create_weak_classifiers()
+    classifiers2 = [svm2, naive2, log2, rf2]
+    for classifier in classifiers2:
         cyan("calculating %s with llm" % classifier.column)
         pred = classifier.fit_and_evaluate(include_llm=True)
 
