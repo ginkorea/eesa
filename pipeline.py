@@ -179,7 +179,7 @@ def load_pipe(file_name):
     return pipe
 
 
-def test_weak():
+def classify_with_weak():
     pipe = Pipe("results/depth_6_imdb_with_llm_results_with_results.csv")
     pipe.process_texts()
     pipe.extract_features()
@@ -196,7 +196,7 @@ def test_weak():
         weak_results.append(y_pred)
         weak_columns.append(column)
     pipe.processed = add_weak_results(pipe.processed, weak_results, weak_columns)
-    pipe.processed.to_csv(f"results/with_weak/{pipe.name}.csv", index=False, sep="|")
+    pipe.processed.to_csv(f"results/with_weak/imdb_results.csv", index=False, sep="|")
     cyan("starting with llm")
     weak_columns = []
     weak_results = []
@@ -204,11 +204,16 @@ def test_weak():
     classifiers2 = [svm2, naive2, log2, rf2]
     for classifier in classifiers2:
         cyan("calculating %s with llm" % classifier.column)
-        y_pred, accuracy, precision, recall, column = classifier.fit_and_evaluate(include_llm=True)
+        y_pred, accuracy, precision, recall, column = classifier.fit_and_evaluate(
+            include_llm=True
+        )
+        y_pred = np.array(y_pred)
         weak_results.append(y_pred)
         weak_columns.append(column)
     pipe2.processed = add_weak_results(pipe2.processed, weak_results, weak_columns)
-    pipe2.processed.to_csv(f"results/with_weak/{pipe2.name}_with_llm.csv", index=False, sep="|")
+    pipe2.processed.to_csv(
+        f"results/with_weak/imdb_results_with_llm.csv", index=False, sep="|"
+    )
 
 
 def add_weak_results(df, results, columns):
@@ -217,4 +222,4 @@ def add_weak_results(df, results, columns):
     return df
 
 
-test_weak()
+classify_with_weak()

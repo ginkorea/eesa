@@ -24,7 +24,7 @@ class WeakClassifier:
         self.model = None
         self.column = None
 
-    def fit_and_evaluate(self, include_llm=False):
+    def fit_and_evaluate(self, include_llm=False, skip_metrics=True):
         if include_llm:
             self.transform_senti_score()
             self.dataset["vector"] = self.dataset.apply(include_llm_vector, axis=1)
@@ -72,7 +72,6 @@ class WeakClassifier:
 
         return y_pred, mean_accuracy, mean_precision, mean_recall, self.column
 
-
     def transform_senti_score(self):
         """Transform the sentiment score to be between 0 and 1"""
         self.dataset["sentiment_score"] = self.dataset["sentiment_score"].apply(
@@ -101,7 +100,6 @@ class NaiveBayesClassifier(WeakClassifier):
 
     def load_model(self):
         self.model = MultinomialNB()
-
 
 
 class LogisticRegressionClassifier(WeakClassifier):
