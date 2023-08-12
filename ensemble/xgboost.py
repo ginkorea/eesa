@@ -20,13 +20,14 @@ class Classifier:
         include_llm=False,
         multi=False,
         folded=False,
+        include_weak=False,
     ):
         self.processed_data = processed_data
         self.processed_data["results"] = np.zeros(len(self.processed_data))
         self.processed_data["fold"] = np.zeros((len(self.processed_data)))
         if include_llm:
             self.processed_data["vector"] = self.processed_data.apply(
-                include_llm_vector, axis=1
+                include_llm_vector, add_weak=include_weak, axis=1
             )
             name = name + "_with_llm_results"
         # yellow(self.processed_data)
@@ -234,13 +235,8 @@ def include_weak_vector(row, verbose=False):
     lr = row["LR"]
     rf = row["RF"]
     if verbose:
-        cyan(
-            "SVM: %s; NB: %s; LR: %s; RF: %s"
-            % (svm, nb, lr, rf)
-        )
-    modified_vector = np.concatenate(
-        [original_vector, [svm, nb, lr, rf]]
-    )
+        cyan("SVM: %s; NB: %s; LR: %s; RF: %s" % (svm, nb, lr, rf))
+    modified_vector = np.concatenate([original_vector, [svm, nb, lr, rf]])
     if verbose:
         yellow("modified vector: %s" % modified_vector[-10:])
     return modified_vector
