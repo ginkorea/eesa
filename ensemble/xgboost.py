@@ -52,6 +52,8 @@ class Classifier:
         self.cv_results = {}  # Store results as dictionary
         self.short_name = name
         self.name = "depth_" + str(max_depth) + "_" + name
+        if include_weak:
+            self.name = self.name + "_with_weak"
         self.multi = multi
         cyan("initialized xgboost classifier for %s" % self.name)
 

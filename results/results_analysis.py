@@ -4,7 +4,7 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 from llm.util import *
 from tabulate import tabulate
-import seaborn as sns
+import os
 
 
 class FoldParser:
@@ -25,7 +25,7 @@ class FoldParser:
         self.r_values = []
         self.par_values = []
         self.get_metrics(true=true, label=label)
-        self.get_confidence_intervals(confidence=confidence)
+        # self.get_confidence_intervals(confidence=confidence)
 
     def parse(self, numb_folds=5):
         for i in range(0, numb_folds):
@@ -119,6 +119,8 @@ class ConfidenceInterval:
         self.margin_error = self.std_err * stats.t.ppf(
             (1 + self.confidence) / 2, len(self.array) - 1
         )
+        self.lower_bound = self.mean - self.margin_error
+        self.upper_bound = self.mean + self.margin_error
 
     def get_ci(self):
         return self.mean, self.margin_error
@@ -239,6 +241,7 @@ class ResultsAnalyzer:
         sampled_rows = min(number, len(df))
         df = df.sample(sampled_rows)
         cyan(tabulate(df, headers='keys', tablefmt='psql'))
+        df.to_latex(f"LaTeX\\{self.name}_{true}_{pred}.tex", index=False)
         return df
 
     def plot_correlation_matrix(self):
@@ -281,6 +284,59 @@ class ResultsAnalyzer:
 
         plt.show()
 
+    def plot_covariance_matrix(self):
+        df = self.fp.data
+        df.drop(columns=['vector', 'processed', 'fold', 'sentence', 'explanation'], inplace=True)
+        covariance_matrix = df.cov()
 
-ra = ResultsAnalyzer("amazon_with_llm_results_with_results.csv", name="amazon")
-ra.plot_scatter()
+        # Create a plot with annotated values
+        plt.figure(figsize=(8, 6))
+        plt.imshow(covariance_matrix, cmap='coolwarm', interpolation='none')
+        plt.colorbar(label='Covariance Value')
+        plt.xticks(range(len(covariance_matrix)), covariance_matrix.columns, rotation=45)
+        plt.yticks(range(len(covariance_matrix)), covariance_matrix.columns)
+        plt.title('Covariance Matrix with Annotated Values')
+        plt.show()
+
+
+
+def merge_csv_files(directory, output_filename="merged.csv"):
+    """
+    Merge all CSV files in a directory into one large CSV file.
+
+    Parameters:
+    - directory: Path to the directory containing the CSV files.
+    - output_filename: Name of the output merged CSV file.
+
+    Returns:
+    - Full path to the merged CSV file.
+    """
+    # List all files in the directory
+    all_files = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.csv')]
+
+    # Use pandas to concatenate all CSVs into one dataframe
+    combined_csv = pd.concat([pd.read_csv(f, sep="|") for f in all_files])
+
+    # Write the combined dataframe to a new CSV
+    output_path = os.path.join(directory, output_filename)
+    combined_csv.to_csv(output_path, index=False, sep="|")
+
+    return output_path
+
+
+def analyze_directory_results(directory, label="sentiment_score"):
+    for filename in os.listdir(directory):
+        if filename.endswith(".csv"):
+            filepath = os.path.join(directory, filename)
+
+            # Create an instance of ResultsAnalyzer
+            analyzer = ResultsAnalyzer(filepath, label=label)
+
+            # Getting 10 samples for each category
+            analyzer.get_examples(true=1, pred=1, number=10)  # True Positives
+            analyzer.get_examples(true=0, pred=0, number=10)  # True Negatives
+            analyzer.get_examples(true=1, pred=0, number=10)  # False Negatives
+            analyzer.get_examples(true=0, pred=1, number=10)  # False Positives
+
+
+analyze_directory_results("depth_3_llm\\")

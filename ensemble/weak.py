@@ -35,40 +35,44 @@ class WeakClassifier:
             self.model, self.x, self.y, cv=self.dataset["fold"].nunique()
         )
         cyan("Finished cross-validation for %s" % self.name)
+        if not skip_metrics:
+            # Calculate accuracy using cross_val_score
+            accuracy_scores = cross_val_score(
+                self.model,
+                self.x,
+                self.y,
+                cv=self.dataset["fold"].nunique(),
+                scoring="accuracy",
+            )
+            mean_accuracy = np.mean(accuracy_scores)
 
-        # Calculate accuracy using cross_val_score
-        accuracy_scores = cross_val_score(
-            self.model,
-            self.x,
-            self.y,
-            cv=self.dataset["fold"].nunique(),
-            scoring="accuracy",
-        )
-        mean_accuracy = np.mean(accuracy_scores)
+            # Calculate precision using cross_val_score
+            precision_scores = cross_val_score(
+                self.model,
+                self.x,
+                self.y,
+                cv=self.dataset["fold"].nunique(),
+                scoring="precision",
+            )
+            mean_precision = np.mean(precision_scores)
 
-        # Calculate precision using cross_val_score
-        precision_scores = cross_val_score(
-            self.model,
-            self.x,
-            self.y,
-            cv=self.dataset["fold"].nunique(),
-            scoring="precision",
-        )
-        mean_precision = np.mean(precision_scores)
+            # Calculate recall using cross_val_score
+            recall_scores = cross_val_score(
+                self.model,
+                self.x,
+                self.y,
+                cv=self.dataset["fold"].nunique(),
+                scoring="recall",
+            )
+            mean_recall = np.mean(recall_scores)
 
-        # Calculate recall using cross_val_score
-        recall_scores = cross_val_score(
-            self.model,
-            self.x,
-            self.y,
-            cv=self.dataset["fold"].nunique(),
-            scoring="recall",
-        )
-        mean_recall = np.mean(recall_scores)
-
-        print("Mean Accuracy: %s" % mean_accuracy)
-        print("Mean Precision: %s" % mean_precision)
-        print("Mean Recall: %s" % mean_recall)
+            print("Mean Accuracy: %s" % mean_accuracy)
+            print("Mean Precision: %s" % mean_precision)
+            print("Mean Recall: %s" % mean_recall)
+        else:
+            mean_accuracy = None
+            mean_precision = None
+            mean_recall = None
 
         return y_pred, mean_accuracy, mean_precision, mean_recall, self.column
 

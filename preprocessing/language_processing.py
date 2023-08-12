@@ -4,6 +4,8 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import regexp_tokenize
 import preprocessor as p
 
+from llm.util import red, cyan
+
 
 def set_up_stop_words():
     # Download stopwords if not already downloaded
@@ -50,16 +52,21 @@ def stem_text(text):
 
 
 def process_text(text, stop_words, tweet=True, verbose=False):
-    if tweet:
-        text = preprocess_twitter_text(text)
-    tokenized = sentiment_tokenizer(text)
-    if verbose:
-        print("Tokenized:", tokenized)
-    filtered = remove_stop_words(tokenized, stop_words)
-    if verbose:
-        print("Filtered:", filtered)
-    stemmed = stem_text(filtered)
-    if verbose:
-        print("Stemmed:", stemmed)
+    cyan("Processing text: %s" % text)
+    try:
+        if tweet:
+            text = preprocess_twitter_text(text)
+        tokenized = sentiment_tokenizer(text)
+        if verbose:
+            print("Tokenized:", tokenized)
+        filtered = remove_stop_words(tokenized, stop_words)
+        if verbose:
+            print("Filtered:", filtered)
+        stemmed = stem_text(filtered)
+        if verbose:
+            print("Stemmed:", stemmed)
+    except TypeError as e:
+        red("Error processing text: %s" % e)
+        stemmed = None
 
     return stemmed

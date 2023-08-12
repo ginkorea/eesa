@@ -10,10 +10,12 @@ import ensemble.weak as weak
 
 
 class Pipe:
-    def __init__(self, dataset, shrink=False, size=1000):
+    def __init__(self, dataset, shrink=False, size=1000, cut=False, cut_size=1000):
         self.stop_words = set_up_stop_words()
         self.name = dataset
         self.raw = load(dataset)
+        if cut:
+            self.cut(size=cut_size)
         if shrink:
             self.shrink(size=size)
         self.text = None
@@ -37,6 +39,10 @@ class Pipe:
     def shrink(self, size):
         self.raw = self.raw.sample(n=size, random_state=1)
         cyan("shrank dataset to %s" % len(self.raw))
+
+    def cut(self, size):
+        self.raw = self.raw[:size]
+        cyan("cut dataset to %s" % len(self.raw))
 
     def process_texts(self):
         self.processed = copy(self.raw)
@@ -179,12 +185,11 @@ def load_pipe(file_name):
     return pipe
 
 
-def classify_with_weak():
-    pipe = Pipe("results/depth_6_imdb_with_llm_results_with_results.csv")
+def classify_with_weak(file_name, name):
+    pipe = Pipe(file_name, cut=True, cut_size=1000)
     pipe.process_texts()
     pipe.extract_features()
-    print(pipe.processed.head())
-    pipe2 = copy(pipe)
+    # pipe2 = copy(pipe)
     cyan("starting without llm")
     svm1, naive1, log1, rf1 = pipe.create_weak_classifiers()
     classifiers1 = [svm1, naive1, log1, rf1]
@@ -196,8 +201,9 @@ def classify_with_weak():
         weak_results.append(y_pred)
         weak_columns.append(column)
     pipe.processed = add_weak_results(pipe.processed, weak_results, weak_columns)
-    pipe.processed.to_csv(f"results/with_weak/imdb_results.csv", index=False, sep="|")
+    pipe.processed.to_csv(f"results/with_weak/{name}.csv", index=False, sep="|")
     cyan("starting with llm")
+    """
     weak_columns = []
     weak_results = []
     svm2, naive2, log2, rf2 = pipe2.create_weak_classifiers()
@@ -214,6 +220,7 @@ def classify_with_weak():
     pipe2.processed.to_csv(
         f"results/with_weak/imdb_results_with_llm.csv", index=False, sep="|"
     )
+    """
 
 
 def add_weak_results(df, results, columns):
@@ -222,4 +229,11 @@ def add_weak_results(df, results, columns):
     return df
 
 
-classify_with_weak()
+def classify_all_with_weak():
+    # classify_with_weak("results\\depth_6_imdb_with_results.csv", "imdb")
+    # classify_with_weak("results\\depth_6_yelp_with_results.csv", "yelp")
+    # classify_with_weak("results\\depth_6_amazon_with_results.csv", "amazon")
+    # classify_with_weak("results\\depth_6_gold_with_results.csv", "gold")
+    classify_with_weak("results\\depth_7_movies_1000_with_results.csv", "movies")
+
+

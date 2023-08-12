@@ -6,5 +6,5 @@
     <option name="pathToExecutable" value="$USER_HOME$/.local/bin/black" />
     <option name="sdkUUID" value="da396cb5-1e0a-4b69-9bef-2cdc4f4e9b95" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 (eesa)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.9 (venv)" project-jdk-type="Python SDK" />
 </project>

@@ -76,6 +76,14 @@ def full():
     train_test("labeled_data/gold_labeled.csv", "gold")
 
 
+def the_weak_full():
+    train_test(
+        "results\\with_weak\\movies.csv", "movies_weak", include_llm=True, include_weak=True,
+        depth=6, multi=False)
+    train_test("results\\with_weak\\gold.csv", "gold_weak", include_llm=True, include_weak=True,
+               depth=6, multi=False)
+
+
 def the_movies(shrink=True, multi=False):
     for i in range(1, 11):
         train_test(
@@ -97,9 +105,5 @@ def the_movies(shrink=True, multi=False):
 
 
 if __name__ == "__main__":
-    train_test(
-        "labeled_data/amazon_cells_labelled_labeled.csv",
-        "amazon",
-        include_llm=True,
-        folded=False,
-    )
+
+    the_weak_full()
