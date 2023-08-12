@@ -237,11 +237,12 @@ class ResultsAnalyzer:
             df = results_to_binary(df, results=self.sentiment_score)
             df = df[df[self.sentiment_score] == pred].copy()
         df.round(2)
-        df.drop(columns=['vector', 'processed', 'fold'], inplace=True)
+        df.drop(columns=['vector', 'processed', 'fold', 'confidence_rating', 'explanation_score', 'results'], inplace=True)
         sampled_rows = min(number, len(df))
         df = df.sample(sampled_rows)
         cyan(tabulate(df, headers='keys', tablefmt='psql'))
-        df.to_latex(f"LaTeX\\{self.name}_{true}_{pred}.tex", index=False)
+        column_format = "r{1cm} p{0.4in} r{1cm} p{0.4in}"
+        df.to_latex(f"LaTeX\\{self.name}_{true}_{pred}.tex", index=False, column_format=column_format)
         return df
 
     def plot_correlation_matrix(self):
