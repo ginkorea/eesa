@@ -3,6 +3,8 @@ import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from llm.util import *
+from tabulate import tabulate
+import seaborn as sns
 
 
 class FoldParser:
@@ -192,8 +194,93 @@ def senti_score_metrics(file):
     metrics = Metric(df, true="sentiment", label="sentiment_score", transform=True)
     metrics.results()
 
-senti_score_metrics("amazon_with_llm_results_with_results.csv")
-senti_score_metrics("yelp_with_llm_results_with_results.csv")
-senti_score_metrics("imdb_with_llm_results_with_results.csv")
-senti_score_metrics("gold_with_llm_results_with_results.csv")
-senti_score_metrics("movies_1000_with_llm_results/depth_3_movies_1000_with_llm_results_with_results.csv")
+
+def senti_score_test():
+    senti_score_metrics("amazon_with_llm_results_with_results.csv")
+    senti_score_metrics("yelp_with_llm_results_with_results.csv")
+    senti_score_metrics("imdb_with_llm_results_with_results.csv")
+    senti_score_metrics("gold_with_llm_results_with_results.csv")
+    senti_score_metrics("movies_1000_with_llm_results/depth_3_movies_1000_with_llm_results_with_results.csv")
+
+
+def results_to_binary(df, results="results"):
+    df[results] = df[results].apply(lambda x: 1 if x > 0.5 else 0)
+    return df
+
+
+class ResultsAnalyzer:
+
+    def __init__(self, dataset, name=None, true="sentiment", label="results", confidence=0.95):
+        self.dataset = dataset
+        if name is None:
+            self.name = dataset
+            self.name = self.name.split("/")[-1]
+            self.name = self.name.split(".")[0]
+        self.true = true
+        self.label = label
+        red(self.label)
+        self.sentiment_score = "sentiment_score"
+        self.confidence = confidence
+        self.fp = FoldParser(self.dataset, numb_folds=5, true=self.true, label=self.label, confidence=self.confidence)
+
+    def get_examples(self, true, pred, number, sentiment_score=False):
+        df = self.fp.data
+        cyan(df)
+        df = df[df[self.true] == true].copy()
+        cyan(df)
+        if not sentiment_score:
+            df = results_to_binary(df, results=self.label)
+            df = df[df[self.label] == pred].copy()
+        else:
+            df = results_to_binary(df, results=self.sentiment_score)
+            df = df[df[self.sentiment_score] == pred].copy()
+        df.round(2)
+        df.drop(columns=['vector', 'processed', 'fold'], inplace=True)
+        sampled_rows = min(number, len(df))
+        df = df.sample(sampled_rows)
+        cyan(tabulate(df, headers='keys', tablefmt='psql'))
+        return df
+
+    def plot_correlation_matrix(self):
+        df = self.fp.data
+        df.drop(columns=['vector', 'processed', 'fold', 'sentence','explanation'], inplace=True)
+        correlation_matrix = df.corr()
+
+        # Create a plot with annotated values
+        plt.figure(figsize=(8, 6))
+        plt.imshow(correlation_matrix, cmap='coolwarm', interpolation='none')
+        plt.colorbar(label='Correlation Coefficient')
+        plt.xticks(range(len(correlation_matrix)), correlation_matrix.columns, rotation=45)
+        plt.yticks(range(len(correlation_matrix)), correlation_matrix.columns)
+        plt.title('Correlation Matrix with Annotated Values')
+        plt.show()
+
+    def plot_scatter(self):
+        df = self.fp.data
+        df.drop(columns=['vector', 'processed', 'fold', 'sentence','explanation'], inplace=True)
+        df = results_to_binary(df, results=self.label)
+        df['accuracy'] = (df[self.true] == df[self.label])
+
+        # Create scatter plot with color and size encoding
+        plt.figure(figsize=(10, 6))
+
+        # Scatter plot with color and size encoding for accuracy
+        scatter = plt.scatter(
+            df['confidence_rating'],
+            df['explanation_score'],
+            c=df['accuracy'],
+            cmap='coolwarm',
+            s=df['accuracy'] * 100 + 50,  # Adjust size based on accuracy
+            alpha=0.7,  # Set transparency for better visibility
+        )
+
+        plt.colorbar(scatter, label='Accuracy')
+        plt.xlabel('Confidence Rating')
+        plt.ylabel('Explanation Score')
+        plt.title('Scatter Plot: Confidence Rating vs. Explanation Score with Accuracy Color and Size Encoding')
+
+        plt.show()
+
+
+ra = ResultsAnalyzer("amazon_with_llm_results_with_results.csv", name="amazon")
+ra.plot_scatter()

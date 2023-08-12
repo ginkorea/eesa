@@ -207,7 +207,7 @@ class Classifier:
         cyan(self.cv_results)
 
 
-def include_llm_vector(row, verbose=False):
+def include_llm_vector(row, verbose=False, add_weak=False):
     original_vector = row["vector"]
     senti_score = row["sentiment_score"]
     conf_rate = row["confidence_rating"]
@@ -222,4 +222,25 @@ def include_llm_vector(row, verbose=False):
     )
     if verbose:
         yellow("modified vector: %s" % modified_vector[-5:])
+    if add_weak:
+        modified_vector = include_weak_vector(row, verbose=verbose)
+    return modified_vector
+
+
+def include_weak_vector(row, verbose=False):
+    original_vector = row["vector"]
+    svm = row["SVM"]
+    nb = row["NB"]
+    lr = row["LR"]
+    rf = row["RF"]
+    if verbose:
+        cyan(
+            "SVM: %s; NB: %s; LR: %s; RF: %s"
+            % (svm, nb, lr, rf)
+        )
+    modified_vector = np.concatenate(
+        [original_vector, [svm, nb, lr, rf]]
+    )
+    if verbose:
+        yellow("modified vector: %s" % modified_vector[-10:])
     return modified_vector

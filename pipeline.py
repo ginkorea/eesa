@@ -180,20 +180,41 @@ def load_pipe(file_name):
 
 
 def test_weak():
-    pipe = Pipe("results/amazon_with_results.csv")
+    pipe = Pipe("results/depth_6_imdb_with_llm_results_with_results.csv")
     pipe.process_texts()
     pipe.extract_features()
+    print(pipe.processed.head())
     pipe2 = copy(pipe)
+    cyan("starting without llm")
     svm1, naive1, log1, rf1 = pipe.create_weak_classifiers()
     classifiers1 = [svm1, naive1, log1, rf1]
+    weak_results = []
+    weak_columns = []
     for classifier in classifiers1:
         yellow("calculating %s without llm" % classifier.column)
-        pred = classifier.fit_and_evaluate()
+        y_pred, accuracy, precision, recall, column = classifier.fit_and_evaluate()
+        weak_results.append(y_pred)
+        weak_columns.append(column)
+    pipe.processed = add_weak_results(pipe.processed, weak_results, weak_columns)
+    pipe.processed.to_csv(f"results/with_weak/{pipe.name}.csv", index=False, sep="|")
+    cyan("starting with llm")
+    weak_columns = []
+    weak_results = []
     svm2, naive2, log2, rf2 = pipe2.create_weak_classifiers()
     classifiers2 = [svm2, naive2, log2, rf2]
     for classifier in classifiers2:
         cyan("calculating %s with llm" % classifier.column)
-        pred = classifier.fit_and_evaluate(include_llm=True)
+        y_pred, accuracy, precision, recall, column = classifier.fit_and_evaluate(include_llm=True)
+        weak_results.append(y_pred)
+        weak_columns.append(column)
+    pipe2.processed = add_weak_results(pipe2.processed, weak_results, weak_columns)
+    pipe2.processed.to_csv(f"results/with_weak/{pipe2.name}_with_llm.csv", index=False, sep="|")
+
+
+def add_weak_results(df, results, columns):
+    for result, column_name in zip(results, columns):
+        df[column_name] = result
+    return df
 
 
 test_weak()
