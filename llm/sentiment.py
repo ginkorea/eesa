@@ -1,6 +1,4 @@
-import openai
-
-from llm.util import *
+from util import *
 from llm.openai_utils import *
 import time
 
@@ -85,7 +83,6 @@ class SentiSummary(SentiChat):
 
 
 def create_senti_chat_bot():
-    openai.api_key = get_openai_key()
     cb = SentiChat()
     cb.say_last()
     run = True

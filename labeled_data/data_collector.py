@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from llm.util import *
+from util import *
 
 
 def combine_csv_files(directory_path):

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
-from llm.util import *
+from util import *
 from tabulate import tabulate
 import os
 

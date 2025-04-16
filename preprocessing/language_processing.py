@@ -4,7 +4,7 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import regexp_tokenize
 import preprocessor as p
 
-from llm.util import red, cyan
+from util import red, cyan
 
 
 def set_up_stop_words():

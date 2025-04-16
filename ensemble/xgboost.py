@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.model_selection import KFold
 import xgboost as xgb
-from llm.util import *
+from util import *
 import concurrent.futures
 import os
 

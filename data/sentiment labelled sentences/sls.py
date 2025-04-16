@@ -1,6 +1,6 @@
 import pandas as pd
 import re
-from llm.util import *
+from util import *
 
 
 def txt2csv(input_file):
