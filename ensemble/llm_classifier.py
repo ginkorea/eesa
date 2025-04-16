@@ -8,12 +8,8 @@ Provides scoring, confidence, and explanation with summarization.
 import re
 import numpy as np
 import pandas as pd
-import openai
-from openai_llm import get_openai_key, SentiChat, SentiSummary
+from openai_llm.sentiment import SentiChat, SentiSummary
 from util import red, green, cyan
-
-# Initialize OpenAI key globally
-openai.api_key = get_openai_key()
 
 
 class LLMClassifier:

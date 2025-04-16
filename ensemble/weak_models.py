@@ -15,7 +15,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
-from xgb_sentiment import include_llm_vector
+from .xgb_sentiment import include_llm_vector
 from util import cyan, green, yellow
 
 

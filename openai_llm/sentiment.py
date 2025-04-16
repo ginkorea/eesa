@@ -1,11 +1,13 @@
 # sentiment.py
-import time
-import openai
-from util import *
-from openai_llm.openai_utils import initialize_openai_api
 
-# Initialize OpenAI API key once
-initialize_openai_api()
+import time
+from openai import OpenAI
+from util import *
+from openai_llm.openai_utils import get_openai_key
+
+# Initialize OpenAI client
+client = OpenAI(api_key=get_openai_key())
+
 
 class BaseSentimentChat:
     """
@@ -20,18 +22,18 @@ class BaseSentimentChat:
         self.response = None
 
     def _create_completion(self, messages):
-        """Internal method to safely call OpenAI's API with retry logic."""
+        """Uses the updated OpenAI API v1+ to create a chat completion."""
         max_retries = 5
         for attempt in range(max_retries):
             try:
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model=self.model,
                     messages=messages
                 )
                 if self.debug:
                     yellow(response)
-                return response["choices"][0]["message"]["content"]
-            except openai.OpenAIError as e:
+                return response.choices[0].message.content
+            except Exception as e:
                 red(f"[Error] OpenAI API call failed: {e}")
                 time.sleep(1 + attempt)
         raise RuntimeError("OpenAI API failed after multiple retries.")
@@ -59,16 +61,23 @@ class SentiChat(BaseSentimentChat):
         system_prompt = (
             "You are a sentiment analyzer. You will respond to a user's prompt with a four-part response separated by '|'. "
             "The first part is a sentiment score between -1 and 1. "
-            "-1 means very negative, 1 means very positive, and 0 is neutral. "
             "The second part is your confidence in the score (0 to 1). "
             "The third part is a quality grade of your explanation (0 to 1). "
-            "The fourth part is a one- to two-sentence explanation of your reasoning."
+            "The fourth part is a one- to two-sentence explanation of your reasoning.\n\n"
+            "Here are some examples:\n\n"
+            "Input: I absolutely love this! It's amazing.\n"
+            "Output: 0.95 | 0.98 | 0.9 | The sentence is clearly very positive with strong emotional tone.\n\n"
+            "Input: This is the worst service I’ve ever had.\n"
+            "Output: -0.9 | 0.95 | 0.92 | The sentence expresses strong dissatisfaction and anger.\n\n"
+            "Input: It’s okay, I guess. Not great, not terrible.\n"
+            "Output: 0.0 | 0.85 | 0.8 | The sentence is neutral with a hint of indifference.\n\n"
+            "Now analyze the following input."
         )
         super().__init__(system_prompt, debug=debug)
 
     def classify_sentiment(self, text: str, verbose: bool = False) -> str:
         """Classifies sentiment for a given input text."""
-        self._add_user_message(f"Analyze the sentiment of the following: {text}")
+        self._add_user_message(f"Input: {text}\nOutput:")
         result = self._create_completion(self.messages)
         if verbose:
             cyan(result)
@@ -90,6 +99,7 @@ class SentiSummary(BaseSentimentChat):
     def summarize_explanations(self, explanations: list[str], verbose: bool = False) -> str:
         """
         Summarizes multiple explanation strings into one.
+        :param verbose: bool to make output verbose or not.
         :param explanations: List of explanation strings.
         """
         explanations_text = "\n".join(f"- {exp}" for exp in explanations)

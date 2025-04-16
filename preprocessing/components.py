@@ -2,7 +2,7 @@
 from sklearn.base import BaseEstimator, TransformerMixin
 from preprocessing.language_processing import process_text, set_up_stop_words
 from preprocessing.feature_extraction import MultiExtractor
-from ensemble.gpt_class import label_row
+from ensemble.llm_classifier import label_row
 import numpy as np
 
 

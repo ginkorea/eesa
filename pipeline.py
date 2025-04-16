@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.linear_model import LogisticRegression
-from ensemble.gpt_class import label_row
+from ensemble.llm_classifier import label_row
 from util import cyan, green, yellow
 from preprocessing import (
     TextPreprocessor,
