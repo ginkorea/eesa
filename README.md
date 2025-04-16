@@ -124,8 +124,8 @@ Located in the `data/` folder.
 
 ## 📖 Original Research
 
-- 🧾 [Gompert: Explainable Sentiment Analysis (PDF)](https://github.com/ginkorea/eesa/research/gompert_paper.pdf)
-- 📊 [Slides: Explainable Sentiment Analysis via GPT (PPTX)](https://github.com/ginkorea/eesa/research/Gompert_AML_v2.pptx)
+- 🧾 [Gompert: Explainable Sentiment Analysis (PDF)](https://github.com/ginkorea/eesa/blob/main/research/gompert_paper.pdf)
+- 📊 [Slides: Explainable Sentiment Analysis via GPT (PPTX)](https://github.com/ginkorea/eesa/blob/main/research/Gompert_AML_v2.pptx)
 
 Published as part of advanced machine learning work at Johns Hopkins University.
 
