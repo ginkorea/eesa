@@ -9,7 +9,7 @@ import re
 import numpy as np
 import pandas as pd
 import openai
-from llm.sentiment import SentiChat, SentiSummary, get_openai_key
+from openai_llm import get_openai_key, SentiChat, SentiSummary
 from util import red, green, cyan
 
 # Initialize OpenAI key globally
@@ -70,12 +70,14 @@ class LLMClassifier:
         summarizer = SentiSummary()
         return summarizer.summarize_explanations(explanations, verbose=self.verbose)
 
-    def _to_float(self, val):
+    @staticmethod
+    def _to_float(val):
         """Helper to extract float from string."""
         try:
             match = re.findall(r'-?\d+\.\d+|-?\d+', val)
             return float(match[0]) if match else np.nan
-        except Exception:
+        except ValueError as e:
+            red(f"Conversion error: {e}")
             return np.nan
 
     def average_results(self, parsed: list[list]) -> list:

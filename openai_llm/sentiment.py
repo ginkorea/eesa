@@ -2,7 +2,7 @@
 import time
 import openai
 from util import *
-from llm.openai_utils import initialize_openai_api
+from openai_llm.openai_utils import initialize_openai_api
 
 # Initialize OpenAI API key once
 initialize_openai_api()

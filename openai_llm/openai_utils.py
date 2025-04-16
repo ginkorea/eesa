@@ -1,6 +1,6 @@
 # openai_utils.py
 import openai
-from llm.key import my_key
+from openai_llm.key import my_key
 
 
 def get_openai_key():
