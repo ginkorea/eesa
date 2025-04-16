@@ -1,15 +1,22 @@
-from llm.key import my_key
+# openai_utils.py
 import openai
+from llm.key import my_key
 
 
 def get_openai_key():
+    """Returns the stored OpenAI API key."""
     return my_key
 
 
-def get_openai_engines():
-    engine_list = []
-    # TODO: The resource 'Engine' has been deprecated
-    # engines = openai.Engine.list()
-    for engine in engines.data:
-        engine_list.append(engine["id"])
-    return engine_list
+def initialize_openai_api():
+    """Initializes the OpenAI API with the provided key."""
+    openai.api_key = get_openai_key()
+
+
+def get_openai_models():
+    """
+    Returns a list of available OpenAI models.
+    Note: Not all accounts have access to all models.
+    """
+    models = openai.models.list()
+    return [model.id for model in models.data]

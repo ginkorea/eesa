@@ -3,70 +3,51 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import regexp_tokenize
 import preprocessor as p
-
 from util import red, cyan
 
 
-def set_up_stop_words():
-    # Download stopwords if not already downloaded
-    nltk.download("stopwords")
-    # Get the set of English stopwords
-    stop_words = set(stopwords.words("english"))
-    return stop_words
+def set_up_stop_words() -> set:
+    """Download and return English stop words."""
+    nltk.download("stopwords", quiet=True)
+    return set(stopwords.words("english"))
 
 
-def remove_stop_words(tokenized_text, stop_words):
-    # Remove stopwords from the list of words
-    filtered_tokens = [
-        token for token in tokenized_text if token.lower() not in stop_words
-    ]
-    return filtered_tokens
+def remove_stop_words(tokens: list[str], stop_words: set) -> list[str]:
+    """Remove stop words from token list."""
+    return [t for t in tokens if t.lower() not in stop_words]
 
 
-def preprocess_twitter_text(tweet_text):
-    # Clean and preprocess the tweet text
-    cleaned_text = p.clean(tweet_text)
-    return cleaned_text
+def preprocess_twitter_text(text: str) -> str:
+    """Clean tweet-specific artifacts from the text."""
+    return p.clean(text)
 
 
-def sentiment_tokenizer(text):
-    # Define the regular expression pattern for word tokenization
-    pattern = r"""(?x)          # Set flag to allow verbose regex
-                  (?:[A-Z]\.)+  # Match abbreviations like U.S.A.
-                  | \w+(?:[-']\w+)*   # Match words with optional hyphens or apostrophes
-                  | \$?\d+(?:\.\d+)?%?  # Match currency and percentages, e.g., $10.99 or 50%
-                  | \.\.\.       # Match ellipsis (...)
-                  | [][.,;"'?():-_`]  # Match specific punctuation marks
-               """
-
-    # Tokenize the input text using the regular expression pattern
-    words = regexp_tokenize(text, pattern)
-
-    return words
+def sentiment_tokenizer(text: str) -> list[str]:
+    """Tokenize input using a custom regex pattern."""
+    pattern = r"""(?x)(?:[A-Z]\.)+|\w+(?:[-']\w+)*|\$?\d+(?:\.\d+)?%?|\.\.\.|[][.,;"'?():-_`]"""
+    return regexp_tokenize(text, pattern)
 
 
-def stem_text(text):
+def stem_text(tokens: list[str]) -> list[str]:
+    """Stem tokens using PorterStemmer."""
     stemmer = PorterStemmer()
-    stemmed = [stemmer.stem(token) for token in text]
-    return stemmed
+    return [stemmer.stem(t) for t in tokens]
 
 
-def process_text(text, stop_words, tweet=True, verbose=False):
-    cyan("Processing text: %s" % text)
+def process_text(text: str, stop_words: set, tweet: bool = True, verbose: bool = False) -> list[str] | None:
+    """Full pipeline for preprocessing a single text."""
     try:
         if tweet:
             text = preprocess_twitter_text(text)
-        tokenized = sentiment_tokenizer(text)
-        if verbose:
-            print("Tokenized:", tokenized)
-        filtered = remove_stop_words(tokenized, stop_words)
-        if verbose:
-            print("Filtered:", filtered)
+        tokens = sentiment_tokenizer(text)
+        filtered = remove_stop_words(tokens, stop_words)
         stemmed = stem_text(filtered)
         if verbose:
-            print("Stemmed:", stemmed)
-    except TypeError as e:
-        red("Error processing text: %s" % e)
-        stemmed = None
-
-    return stemmed
+            cyan(f"Text: {text}")
+            print("→ Tokenized:", tokens)
+            print("→ Filtered:", filtered)
+            print("→ Stemmed:", stemmed)
+        return stemmed
+    except Exception as e:
+        red(f"Error processing text: {e}")
+        return None
