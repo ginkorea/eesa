@@ -87,3 +87,6 @@ def fix_the_movies(file):
 
 
 # fix_the_movies('movies.csv')
+df = load('gold.csv')
+small_df = df.sample(frac=0.01, random_state=1)
+small_df.to_csv('gold_small.csv', index=False, sep='|')

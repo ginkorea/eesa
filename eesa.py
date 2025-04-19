@@ -5,16 +5,17 @@ import time
 import pandas as pd
 import joblib
 from pipeline import SentimentPipeline
-from ensemble import XGBSentimentClassifier, run_comparison_on_dataset
+from ensemble import XGBSentimentClassifier
+from ensemble import run_comparison_on_dataset
 from util import cyan, green, red
 
 
 def train(file: str, name: str, depth: int = 3, include_llm: bool = False,
-          include_weak: bool = False, save_dir: str = "results"):
+          include_weak: bool = False, save_dir: str = "results", verbose: bool = False):
     """Trains an XGBoost model and a LogisticRegression pipeline."""
     start = time.time()
     cyan(f"Starting pipeline on {file}")
-    pipe = SentimentPipeline(file, use_llm=include_llm)
+    pipe = SentimentPipeline(file, use_llm=include_llm, verbose=verbose)
     pipe.train()
     pipe.evaluate()
     pipe.save_model(f"{save_dir}/{name}_pipeline.pkl")
@@ -23,7 +24,8 @@ def train(file: str, name: str, depth: int = 3, include_llm: bool = False,
         include_llm=include_llm,
         include_weak=include_weak,
         max_depth=depth,
-        save_dir=save_dir
+        save_dir=save_dir,
+        verbose=verbose
     )
     clf.fit(pipe.df)
     clf.evaluate()
@@ -32,22 +34,19 @@ def train(file: str, name: str, depth: int = 3, include_llm: bool = False,
 
 
 def label(file: str, batch_size: int, batch_start: int):
-    """Performs batch LLM labeling and saves outputs."""
     start = time.time()
     cyan(f"Labeling {file} from {batch_start} to {batch_start + batch_size}")
-    pipe = SentimentPipeline(file, use_llm=True)
+    pipe = SentimentPipeline(file, use_llm=True, verbose=True)
     pipe.label_and_save(start=batch_start, batch_size=batch_size)
     green(f"Finished LLM labeling in {time.time() - start:.2f}s")
 
 
 def compare(file: str):
-    """Performs ANOVA-based comparison of weak classifiers."""
     df = pd.read_csv(file, sep="|")
     run_comparison_on_dataset(df)
 
 
 def infer(model_path: str, input_path: str, output_path: str = None, use_llm: bool = False):
-    """Runs inference using a trained pipeline model."""
     green(f"Loading model from {model_path}")
     model = joblib.load(model_path)
 
@@ -84,8 +83,8 @@ def parse_args():
     train_parser.add_argument("--llm", action="store_true", help="Include LLM sentiment features")
     train_parser.add_argument("--weak", action="store_true", help="Include weak classifier features")
     train_parser.add_argument("--depth", type=int, default=3, help="XGBoost tree depth")
-    train_parser.add_argument("--shrink", action="store_true", help="Shrink dataset for faster training")
     train_parser.add_argument("--save_dir", default="results", help="Directory to save model/results")
+    train_parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     # Label
     label_parser = subparsers.add_parser("label", help="Batch label using LLM")
@@ -117,7 +116,8 @@ if __name__ == "__main__":
             depth=args.depth,
             include_llm=args.llm,
             include_weak=args.weak,
-            save_dir=args.save_dir
+            save_dir=args.save_dir,
+            verbose=args.verbose
         )
     elif args.command == "label":
         label(

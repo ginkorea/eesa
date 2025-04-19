@@ -8,24 +8,30 @@ from util import red, cyan
 
 def set_up_stop_words() -> set:
     """Download and return English stop words."""
-    nltk.download("stopwords", quiet=True)
-    return set(stopwords.words("english"))
+    try:
+        nltk.download("stopwords", quiet=True)
+        return set(stopwords.words("english"))
+    except Exception as e:
+        red(f"[stopwords] Failed to load NLTK stop words: {e}")
+        return set()
 
 
-def remove_stop_words(tokens: list[str], stop_words: set) -> list[str]:
+def remove_stop_words(tokens: list[str], _stop_words: set) -> list[str]:
     """Remove stop words from token list."""
-    return [t for t in tokens if t.lower() not in stop_words]
+    if not _stop_words:
+        return tokens  # fallback: don't filter
+    return [t for t in tokens if t.lower() not in _stop_words]
 
 
-def preprocess_twitter_text(text: str) -> str:
+def preprocess_twitter_text(_text: str) -> str:
     """Clean tweet-specific artifacts from the text."""
-    return p.clean(text)
+    return p.clean(_text)
 
 
-def sentiment_tokenizer(text: str) -> list[str]:
+def sentiment_tokenizer(_text: str) -> list[str]:
     """Tokenize input using a custom regex pattern."""
     pattern = r"""(?x)(?:[A-Z]\.)+|\w+(?:[-']\w+)*|\$?\d+(?:\.\d+)?%?|\.\.\.|[][.,;"'?():-_`]"""
-    return regexp_tokenize(text, pattern)
+    return regexp_tokenize(_text, pattern)
 
 
 def stem_text(tokens: list[str]) -> list[str]:
@@ -34,16 +40,17 @@ def stem_text(tokens: list[str]) -> list[str]:
     return [stemmer.stem(t) for t in tokens]
 
 
-def process_text(text: str, stop_words: set, tweet: bool = True, verbose: bool = False) -> list[str] | None:
+def process_text(_text: str, _stop_words: set = None, tweet: bool = True, verbose: bool = False) -> list[str] | None:
     """Full pipeline for preprocessing a single text."""
     try:
+        _stop_words = _stop_words or set()
         if tweet:
-            text = preprocess_twitter_text(text)
-        tokens = sentiment_tokenizer(text)
-        filtered = remove_stop_words(tokens, stop_words)
+            _text = preprocess_twitter_text(_text)
+        tokens = sentiment_tokenizer(_text)
+        filtered = remove_stop_words(tokens, _stop_words)
         stemmed = stem_text(filtered)
         if verbose:
-            cyan(f"Text: {text}")
+            cyan(f"Text: {_text}")
             print("→ Tokenized:", tokens)
             print("→ Filtered:", filtered)
             print("→ Stemmed:", stemmed)
@@ -51,3 +58,13 @@ def process_text(text: str, stop_words: set, tweet: bool = True, verbose: bool =
     except Exception as e:
         red(f"Error processing text: {e}")
         return None
+
+
+# =======================
+# 🧪 BASIC TEST
+# =======================
+if __name__ == "__main__":
+    stop_words = set_up_stop_words()
+    text = "This is a sample tweet! #example @user123 😂"
+    result = process_text(text, stop_words, tweet=True, verbose=True)
+    print("Processed Text:", result)

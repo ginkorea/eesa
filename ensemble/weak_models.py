@@ -15,8 +15,8 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
-from .xgb_sentiment import include_llm_vector
 from util import cyan, green, yellow
+from ensemble.xgb_sentiment import include_llm_vector
 
 
 class WeakClassifier(BaseEstimator):
@@ -107,3 +107,49 @@ def RandomForestClassifierWrapper(dataset, **kwargs):
     """Returns a Random Forest weak classifier."""
     model = RandomForestClassifier(random_state=kwargs.get("random_state", 42))
     return WeakClassifier(dataset, model, name="Random Forest", column="RF", **kwargs)
+
+
+if __name__ == "__main__":
+    import pandas as pd
+    from sklearn.datasets import make_classification
+    from sklearn.model_selection import KFold
+
+    print("\n=== Running weak_models test suite ===")
+
+    # Generate synthetic classification data
+    x, y = make_classification(n_samples=50, n_features=10, n_classes=2, random_state=42)
+    x = np.abs(x)
+    folds = list(KFold(n_splits=5, shuffle=True, random_state=42).split(x))
+
+    # Construct DataFrame
+    df = pd.DataFrame({
+        "vector": list(x),
+        "sentiment": list(y),
+        "sentiment_score": [2 * int(label) - 1 for label in y],  # Map [0,1] to [-1,1]
+        "fold": 0
+    })
+    for fold_num, (train_idx, test_idx) in enumerate(folds):
+        df.loc[test_idx, "fold"] = fold_num
+
+    classifiers = [
+        SVMClassifier(df.copy()),
+        NaiveBayesClassifier(df.copy()),
+        LogisticRegressionClassifier(df.copy()),
+        RandomForestClassifierWrapper(df.copy())
+    ]
+
+    for clf in classifiers:
+        print(f"\nTesting {clf.name}...")
+        y_pred, acc, prec, recall, _ = clf.fit_and_evaluate(verbose=True)
+        assert len(y_pred) == len(df), f"{clf.name}: prediction length mismatch"
+        assert 0 <= acc <= 1, "Invalid accuracy"
+        assert 0 <= prec <= 1, "Invalid precision"
+        assert 0 <= recall <= 1, "Invalid recall"
+
+    # Optional: test with LLM vector enabled (if include_llm_vector is defined)
+    print("\nTesting with LLM feature integration...")
+    clf_llm = LogisticRegressionClassifier(df.copy(), include_llm=True)
+    y_pred, *_ = clf_llm.fit_and_evaluate()
+    assert len(y_pred) == len(df), "LLM-integrated model failed."
+
+    print("\n✓ All weak classifier tests passed.\n")

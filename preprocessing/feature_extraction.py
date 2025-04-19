@@ -62,3 +62,26 @@ class MultiExtractor:
 
     def vec2array(self):
         return np.array(self.vector_list, dtype="float")
+
+
+### tests
+
+def test_feature_extraction():
+    # Sample dataset
+    dataset = [
+        "This is a positive review.",
+        "I did not like this product.",
+        "The service was excellent!",
+        "I am not satisfied with the quality."
+    ]
+
+    # Initialize MultiExtractor
+    extractor = MultiExtractor(dataset)
+    extractor.fit()
+    extractor.process()
+
+    # Check the output
+    print(extractor.vec2array())
+
+if __name__ == "__main__":
+    test_feature_extraction()
