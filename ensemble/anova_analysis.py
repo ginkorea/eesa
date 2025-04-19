@@ -22,17 +22,14 @@ def perform_anova(predictions: list[np.ndarray]) -> tuple[list[float], list[floa
     Performs one-way ANOVA on multiple classifier prediction sets.
 
     Args:
-        predictions (list): List of classifier prediction arrays
+        predictions (list of np.ndarray): List of classifier prediction arrays
 
     Returns:
-        tuple: (list of F-scores, list of p-values)
+        tuple: (list with one F-score, list with one p-value)
     """
-    f_scores, p_values = [], []
-    for pred_set in predictions:
-        f_score, p_value = stats.f_oneway(*pred_set)
-        f_scores.append(f_score)
-        p_values.append(p_value)
-    return f_scores, p_values
+    f_score, p_value = stats.f_oneway(*predictions)
+    return [f_score], [p_value]
+
 
 
 class ClassifierComparison:
@@ -65,7 +62,7 @@ class ClassifierComparison:
                 predictions.append(y_pred)
 
             accuracy_scores = cross_val_score(clf.model, self.x, self.y, cv=self.k, scoring="accuracy")
-            f_scores, p_values = perform_anova(self.y, [predictions])
+            f_scores, p_values = perform_anova(predictions)
 
             self.results[name] = {
                 "accuracy_scores": accuracy_scores,
