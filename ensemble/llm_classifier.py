@@ -37,7 +37,10 @@ class LLMClassifier:
         Returns:
             list[str]: Raw GPT responses from each classifier
         """
-        self.results = [clf.classify_sentiment(text, verbose=self.verbose) for clf in self.classifiers]
+        self.results = [
+            clf.classify_sentiment(text, verbose=self.verbose)
+            for clf in self.classifiers
+        ]
         return self.results
 
     def parse_results(self) -> list[list]:
@@ -50,7 +53,9 @@ class LLMClassifier:
         parsed = []
         for result in self.results:
             parts = result.split("|")
-            parsed.append([self._to_float(parts[i]) if i < 3 else parts[i] for i in range(4)])
+            parsed.append(
+                [self._to_float(parts[i]) if i < 3 else parts[i] for i in range(4)]
+            )
         return parsed
 
     def summarize_explanations(self, explanations: list[str]) -> str:
@@ -70,7 +75,7 @@ class LLMClassifier:
     def _to_float(val):
         """Helper to extract float from string."""
         try:
-            match = re.findall(r'-?\d+\.\d+|-?\d+', val)
+            match = re.findall(r"-?\d+\.\d+|-?\d+", val)
             return float(match[0]) if match else np.nan
         except ValueError as e:
             red(f"Conversion error: {e}")
@@ -86,7 +91,15 @@ class LLMClassifier:
         Returns:
             list: [avg_score, avg_confidence, avg_quality, explanation_summary]
         """
-        df = pd.DataFrame(parsed, columns=["sentiment_score", "confidence_rating", "explanation_score", "explanation"])
+        df = pd.DataFrame(
+            parsed,
+            columns=[
+                "sentiment_score",
+                "confidence_rating",
+                "explanation_score",
+                "explanation",
+            ],
+        )
         try:
             summary = self.summarize_explanations(df["explanation"].tolist())
         except Exception as e:
@@ -97,7 +110,7 @@ class LLMClassifier:
             df["sentiment_score"].mean(),
             df["confidence_rating"].mean(),
             df["explanation_score"].mean(),
-            summary
+            summary,
         ]
 
     def classify_text(self, text: str) -> list:
@@ -117,17 +130,30 @@ class LLMClassifier:
 
 # === EXPORTABLE UTILS FOR OTHER MODULES ===
 
-def label_row(text: str, num_classifiers: int = 3, verbose: bool = False) -> list:
-    """
-    High-level wrapper for single-text LLM-based sentiment labeling.
 
-    Args:
-        text (str): Input text
-        num_classifiers (int): Number of ensemble GPT classifiers
-        verbose (bool): Print debug information
+def label_row(
+    text: str, existing_row: dict = None, verbose: bool = False
+) -> list | None:
+    if not text or not isinstance(text, str) or text.strip() == "":
+        if verbose:
+            print(f"[LLM] Skipped invalid text.")
+        return None
 
-    Returns:
-        list: [sentiment_score, confidence_rating, explanation_score, explanation]
-    """
-    classifier = LLMClassifier(num_classifiers=num_classifiers, verbose=verbose)
-    return classifier.classify_text(text)
+    if existing_row and all(
+        k in existing_row and existing_row[k] is not None
+        for k in ["sentiment_score", "confidence_rating", "explanation_score"]
+    ):
+        return [
+            existing_row["sentiment_score"],
+            existing_row["confidence_rating"],
+            existing_row["explanation_score"],
+            existing_row.get("explanation", ""),
+        ]
+
+    try:
+        classifier = LLMClassifier(verbose=verbose)
+        return classifier.classify_text(text)
+    except Exception as e:
+        if verbose:
+            print(f"[LLM] Error during labeling: {e}")
+        return None

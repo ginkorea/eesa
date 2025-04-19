@@ -9,7 +9,6 @@ High-performance XGBoost classifier for sentiment analysis with support for:
 """
 
 import os
-import joblib
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -19,20 +18,6 @@ from util import cyan, green, yellow, red
 
 
 class XGBSentimentClassifier:
-    """
-    Modernized ensemble classifier using XGBoost with optional LLM/weak classifier feature augmentation.
-
-    Args:
-        include_llm (bool): Include LLM sentiment features (score, confidence, explanation rating)
-        include_weak (bool): Include weak classifier predictions (SVM, NB, LR, RF)
-        n_splits (int): Number of CV folds
-        max_depth (int): XGBoost max tree depth
-        eta (float): XGBoost learning rate
-        multiproc (bool): Whether to use multiprocessing for folds
-        random_state (int): Random seed for reproducibility
-        save_dir (str): Optional path to save results
-    """
-
     def __init__(
         self,
         include_llm: bool = False,
@@ -42,9 +27,9 @@ class XGBSentimentClassifier:
         eta: float = 0.1,
         multiproc: bool = False,
         random_state: int = 42,
-        save_dir: Optional[str] = None
+        save_dir: Optional[str] = None,
+        verbose: bool = False,
     ):
-        self.processed_df = None
         self.include_llm = include_llm
         self.include_weak = include_weak
         self.n_splits = n_splits
@@ -53,11 +38,13 @@ class XGBSentimentClassifier:
         self.multiproc = multiproc
         self.random_state = random_state
         self.save_dir = save_dir
+        self.verbose = verbose
 
         self.results = []
-        self.model_name = self._build_model_name()
         self.cv_results = []
+        self.model_name = self._build_model_name()
         self.trained = False
+        self.final_model = None  # ✅ will store the trained model
 
     def _build_model_name(self):
         name = "xgb"
@@ -80,7 +67,7 @@ class XGBSentimentClassifier:
     def _prepare_data(self, df: pd.DataFrame):
         df = df.copy()
         df["vector"] = df.apply(self._augment_vector, axis=1)
-        df["fold"] = -1  # default
+        df["fold"] = -1
         return df
 
     def _get_folds(self, df):
@@ -90,13 +77,6 @@ class XGBSentimentClassifier:
         return df
 
     def fit(self, df: pd.DataFrame, num_rounds: int = 100):
-        """
-        Trains the classifier with cross-validation on the given DataFrame.
-
-        Args:
-            df (pd.DataFrame): Input DataFrame with `vector` and `sentiment` columns
-            num_rounds (int): Boosting rounds per fold
-        """
         cyan("Preparing data...")
         df = self._prepare_data(df)
         df = self._get_folds(df)
@@ -128,12 +108,15 @@ class XGBSentimentClassifier:
             model = xgb.train(params, dtrain, num_boost_round=num_rounds)
             y_pred = model.predict(dtest)
             self.cv_results.append((fold, y_pred, test_idx))
-
-            # Store predictions in DataFrame
             df.loc[test_idx, "results"] = y_pred
             df.loc[test_idx, "fold"] = fold
 
         self.processed_df = df
+
+        # ✅ Final training on entire dataset for deployment use
+        cyan("Training final model on all data...")
+        dtrain_all = xgb.DMatrix(x_all, label=y_all)
+        self.final_model = xgb.train(params, dtrain_all, num_boost_round=num_rounds)
         self.trained = True
         green("Training complete.")
 
@@ -144,47 +127,41 @@ class XGBSentimentClassifier:
         os.makedirs(self.save_dir, exist_ok=True)
         file_path = os.path.join(self.save_dir, f"{self.model_name}_cv_results.csv")
         self.processed_df.to_csv(file_path, index=False, sep="|")
-        green(f"Saved results to {file_path}")
+        if self.verbose:
+            green(f"Saved CV results to {file_path}")
+
+    def save_model(self, path="models/xgb_model.bin"):
+        """Save the final trained model."""
+        if not self.final_model:
+            raise RuntimeError("No model to save. Train the model first.")
+        self.final_model.save_model(path)
+        green(f"✓ Final model saved to {path}")
+
+    def load_model(self, path="models/xgb_model.bin"):
+        """Load a previously trained model."""
+        self.final_model = xgb.Booster()
+        self.final_model.load_model(path)
+        self.trained = True
+        green(f"✓ Model loaded from {path}")
 
     def evaluate(self):
-        """
-        Prints average log loss and accuracy across folds.
-        """
         if not self.trained:
             raise RuntimeError("Model not trained yet.")
-
         y_true = np.vstack(self.processed_df["sentiment"].values).ravel()
         y_pred = self.processed_df["results"].values
         binary_pred = (y_pred > 0.5).astype(int)
         acc = np.mean(binary_pred == y_true)
         log_loss = -np.mean(y_true * np.log(y_pred + 1e-10) + (1 - y_true) * np.log(1 - y_pred + 1e-10))
-
-        green(f"Accuracy:   {acc:.4f}")
-        green(f"Log Loss:   {log_loss:.4f}")
         return acc, log_loss
 
-    def save_model(self, path="models/xgb_model.pkl"):
-        """Save internal state to file."""
-        joblib.dump(self, path)
-        green(f"Saved model to {path}")
-
     def predict(self, df: pd.DataFrame):
-        """
-        Predict sentiment probabilities on new data (requires same vector format).
-
-        Args:
-            df (pd.DataFrame): Input data with `vector` column and optionally LLM/weak features
-
-        Returns:
-            np.ndarray: Predicted probabilities
-        """
+        if not self.trained or self.final_model is None:
+            raise RuntimeError("No trained model available. Train or load the model first.")
         df = df.copy()
         df["vector"] = df.apply(self._augment_vector, axis=1)
         x = np.vstack(df["vector"].values)
         dmatrix = xgb.DMatrix(x)
-        # We'll just return a dummy prediction until an actual .predict_model is set up
-        raise NotImplementedError("Prediction on new data requires a final model. Save one from training.")
-
+        return self.final_model.predict(dmatrix)
 
 # === EXPORTABLE UTILS FOR OTHER MODULES ===
 

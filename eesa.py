@@ -1,44 +1,32 @@
 # eesa.py
+# CLI for EESA: Ensemble-based Sentiment Analysis
 
 import argparse
-import time
 import pandas as pd
 import joblib
 from pipeline import SentimentPipeline
-from ensemble import XGBSentimentClassifier
 from ensemble import run_comparison_on_dataset
-from util import cyan, green, red
+from util import cyan, green
 
 
-def train(file: str, name: str, depth: int = 3, include_llm: bool = False,
-          include_weak: bool = False, save_dir: str = "results", verbose: bool = False):
-    """Trains an XGBoost model and a LogisticRegression pipeline."""
-    start = time.time()
-    cyan(f"Starting pipeline on {file}")
-    pipe = SentimentPipeline(file, use_llm=include_llm, verbose=verbose)
+def train(
+    file: str,
+    name: str,
+    save_dir: str = "results",
+    verbose: bool = False,
+    llm: bool = False,
+    weak: bool = False,
+):
+    cyan(f"Starting training on {file}")
+    pipe = SentimentPipeline(file, use_llm=llm, use_weak=weak, verbose=verbose)
     pipe.train()
     pipe.evaluate()
     pipe.save_model(f"{save_dir}/{name}_pipeline.pkl")
 
-    clf = XGBSentimentClassifier(
-        include_llm=include_llm,
-        include_weak=include_weak,
-        max_depth=depth,
-        save_dir=save_dir,
-        verbose=verbose
-    )
-    clf.fit(pipe.df)
-    clf.evaluate()
-    clf.save_model(f"{save_dir}/{name}_xgb_model.pkl")
-    green(f"Finished training {name} in {time.time() - start:.2f}s")
-
 
 def label(file: str, batch_size: int, batch_start: int):
-    start = time.time()
-    cyan(f"Labeling {file} from {batch_start} to {batch_start + batch_size}")
     pipe = SentimentPipeline(file, use_llm=True, verbose=True)
     pipe.label_and_save(start=batch_start, batch_size=batch_size)
-    green(f"Finished LLM labeling in {time.time() - start:.2f}s")
 
 
 def compare(file: str):
@@ -46,62 +34,43 @@ def compare(file: str):
     run_comparison_on_dataset(df)
 
 
-def infer(model_path: str, input_path: str, output_path: str = None, use_llm: bool = False):
-    green(f"Loading model from {model_path}")
+def infer(model_path: str, input_path: str, output_path: str = None):
     model = joblib.load(model_path)
-
-    df = pd.read_csv(input_path, sep="|") if input_path.endswith(".csv") else pd.read_csv(input_path)
-    if "sentence" not in df.columns:
-        raise ValueError("Input file must contain a 'sentence' column.")
-
+    df = pd.read_csv(input_path, sep="|")
     X = df["sentence"].tolist()
-    cyan(f"Running predictions on {len(X)} samples...")
-
-    try:
-        y_pred = model.predict(X)
-    except Exception as e:
-        red(f"Prediction error: {e}")
-        return
-
-    df["prediction"] = y_pred
-
+    preds = model.predict(X)
+    df["prediction"] = preds
     if output_path:
         df.to_csv(output_path, sep="|", index=False)
-        green(f"Saved predictions to {output_path}")
+        green(f"✓ Saved to {output_path}")
     else:
         print(df[["sentence", "prediction"]].head())
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="EESA: Ensemble-based Explainable Sentiment Analysis CLI")
+    parser = argparse.ArgumentParser(description="EESA: Sentiment CLI")
     subparsers = parser.add_subparsers(dest="command")
 
-    # Train
-    train_parser = subparsers.add_parser("train", help="Train XGBoost + Pipeline model")
-    train_parser.add_argument("file", help="Path to input CSV")
-    train_parser.add_argument("name", help="Model name identifier")
-    train_parser.add_argument("--llm", action="store_true", help="Include LLM sentiment features")
-    train_parser.add_argument("--weak", action="store_true", help="Include weak classifier features")
-    train_parser.add_argument("--depth", type=int, default=3, help="XGBoost tree depth")
-    train_parser.add_argument("--save_dir", default="results", help="Directory to save model/results")
-    train_parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    train_cmd = subparsers.add_parser("train")
+    train_cmd.add_argument("file")
+    train_cmd.add_argument("name")
+    train_cmd.add_argument("--save_dir", default="results")
+    train_cmd.add_argument("--verbose", action="store_true")
+    train_cmd.add_argument("--llm", action="store_true")
+    train_cmd.add_argument("--weak", action="store_true")
 
-    # Label
-    label_parser = subparsers.add_parser("label", help="Batch label using LLM")
-    label_parser.add_argument("file", help="Path to CSV file")
-    label_parser.add_argument("batch_size", type=int, help="Batch size")
-    label_parser.add_argument("batch_start", type=int, help="Batch start index")
+    label_cmd = subparsers.add_parser("label")
+    label_cmd.add_argument("file")
+    label_cmd.add_argument("batch_size", type=int)
+    label_cmd.add_argument("batch_start", type=int)
 
-    # Compare
-    compare_parser = subparsers.add_parser("compare", help="Run weak classifier ANOVA comparison")
-    compare_parser.add_argument("file", help="Path to labeled dataset")
+    compare_cmd = subparsers.add_parser("compare")
+    compare_cmd.add_argument("file")
 
-    # Infer
-    infer_parser = subparsers.add_parser("infer", help="Run inference using trained model")
-    infer_parser.add_argument("model_path", help="Path to trained .pkl model")
-    infer_parser.add_argument("input_path", help="CSV with 'sentence' column")
-    infer_parser.add_argument("--output_path", help="Optional CSV to write predictions")
-    infer_parser.add_argument("--llm", action="store_true", help="Model includes LLM inputs")
+    infer_cmd = subparsers.add_parser("infer")
+    infer_cmd.add_argument("model_path")
+    infer_cmd.add_argument("input_path")
+    infer_cmd.add_argument("--output_path")
 
     return parser.parse_args()
 
@@ -113,18 +82,13 @@ if __name__ == "__main__":
         train(
             file=args.file,
             name=args.name,
-            depth=args.depth,
-            include_llm=args.llm,
-            include_weak=args.weak,
             save_dir=args.save_dir,
-            verbose=args.verbose
+            verbose=args.verbose,
+            llm=args.llm,
+            weak=args.weak,
         )
     elif args.command == "label":
-        label(
-            file=args.file,
-            batch_size=args.batch_size,
-            batch_start=args.batch_start
-        )
+        label(file=args.file, batch_size=args.batch_size, batch_start=args.batch_start)
     elif args.command == "compare":
         compare(args.file)
     elif args.command == "infer":
@@ -132,7 +96,6 @@ if __name__ == "__main__":
             model_path=args.model_path,
             input_path=args.input_path,
             output_path=args.output_path,
-            use_llm=args.llm
         )
     else:
         print("No command provided. Use --help for options.")

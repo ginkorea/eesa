@@ -15,7 +15,9 @@ class BaseSentimentChat:
     Handles structured prompting and retries.
     """
 
-    def __init__(self, system_prompt: str, model: str = "gpt-4-1106-preview", debug: bool = False):
+    def __init__(
+        self, system_prompt: str, model: str = "gpt-4.1-nano", debug: bool = False
+    ):
         self.model = model
         self.debug = debug
         self.messages = [{"role": "system", "content": system_prompt}]
@@ -27,8 +29,7 @@ class BaseSentimentChat:
         for attempt in range(max_retries):
             try:
                 response = client.chat.completions.create(
-                    model=self.model,
-                    messages=messages
+                    model=self.model, messages=messages
                 )
                 if self.debug:
                     yellow(response)
@@ -96,14 +97,18 @@ class SentiSummary(BaseSentimentChat):
         )
         super().__init__(system_prompt, debug=debug)
 
-    def summarize_explanations(self, explanations: list[str], verbose: bool = False) -> str:
+    def summarize_explanations(
+        self, explanations: list[str], verbose: bool = False
+    ) -> str:
         """
         Summarizes multiple explanation strings into one.
         :param verbose: bool to make output verbose or not.
         :param explanations: List of explanation strings.
         """
         explanations_text = "\n".join(f"- {exp}" for exp in explanations)
-        self._add_user_message(f"Provide a 1-2 sentence summary of the following explanations:\n{explanations_text}")
+        self._add_user_message(
+            f"Provide a 1-2 sentence summary of the following explanations:\n{explanations_text}"
+        )
         result = self._create_completion(self.messages)
         if verbose:
             cyan(result)
